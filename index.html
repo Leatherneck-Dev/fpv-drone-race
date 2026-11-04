@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPV 드론 레이스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070a10; --glass: rgba(9, 13, 21, 0.62); --glass2: rgba(9, 13, 21, 0.82); --edge: rgba(255, 255, 255, 0.09);
+    --text: #eef3f9; --muted: #8e9bb0; --acc: #2dff8f; --acc2: #34d3ff; --gold: #ffc53a; --bad: #ff4d5e;
+    --num: "Rajdhani", "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: "Noto Sans KR", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  #view, #overlay { position: fixed; inset: 0; display: block; }
+  #overlay { pointer-events: none; }
+  .hidden { display: none !important; }
+  kbd { font-family: var(--num); font-weight: 700; font-size: 12px; display: inline-block; min-width: 20px; padding: 1px 6px;
+    border: 1px solid rgba(255,255,255,.28); border-bottom-width: 2px; border-radius: 5px; background: rgba(255,255,255,.08); color: #fff; text-align: center; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ================= HUD ================= */
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  body.in-menu #hud, body.in-menu #overlay { display: none; }
+  .glass { background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  #timerWrap { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; }
+  body.edu #timerWrap { top: 74px; }
+  #timerBox { padding: 6px 34px 8px; clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 100%, 0 100%); }
+  #timerBox .lbl { font: 700 11px var(--num); letter-spacing: 3px; color: var(--muted); }
+  #timer { font: 700 46px/1 var(--num); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+  #timer.idle { color: #9aa6b8; } #timer.done { color: var(--gold); }
+  #delta { display: inline-block; margin-top: 6px; font: 700 20px var(--num); padding: 1px 12px; border-radius: 4px; opacity: 0; transition: opacity .25s; }
+  #delta.show { opacity: 1; } #delta.good { background: rgba(45,255,143,.18); color: var(--acc); } #delta.bad { background: rgba(255,77,94,.18); color: #ff7d8a; }
+  #hint { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--gold); text-shadow: 0 2px 8px #000; }
+
+  #gateBox { position: absolute; top: 14px; left: 16px; padding: 10px 16px 12px; min-width: 210px; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+  .cap { font: 700 11px var(--num); letter-spacing: 3px; color: var(--muted); }
+  #gateNum { font: 700 34px/1.05 var(--num); } #gateNum small { font-size: 20px; color: var(--muted); }
+  #gateBar { display: flex; gap: 3px; margin-top: 8px; }
+  #gateBar i { flex: 1; height: 5px; background: rgba(255,255,255,.14); border-radius: 1px; }
+  #gateBar i.on { background: var(--acc); box-shadow: 0 0 6px var(--acc); } #gateBar i.cur { background: var(--gold); }
+  #teamBox { margin-top: 10px; }
+  #hudTeam { font-weight: 900; font-size: 19px; color: #fff; }
+  #hudMap { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  #recBox { position: absolute; top: 14px; right: 16px; padding: 10px 16px 12px; min-width: 230px; text-align: right;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%); }
+  #recBox .row { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; margin-top: 4px; font-size: 14px; }
+  #recBox .row b { font: 700 18px var(--num); } #recBox .row .gold { color: var(--gold); }
+  #recBox .stars { font-size: 22px; letter-spacing: 2px; color: var(--gold); }
+
+  #osd { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 22px; align-items: flex-end; padding: 8px 22px;
+    clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 100%, 0 100%); }
+  #osd .v { font: 700 28px/1 var(--num); font-variant-numeric: tabular-nums; } #osd .u { font: 600 12px var(--num); color: var(--muted); margin-left: 3px; }
+  #osd .lv { font: 700 13px var(--num); letter-spacing: 1px; color: #071018; background: var(--acc2); padding: 3px 8px; border-radius: 3px; align-self: center; }
+
+  #keys { position: absolute; bottom: 18px; left: 16px; padding: 10px; font-size: 12.5px; pointer-events: auto; border-radius: 10px; }
+  #keys .kb { display: flex; gap: 6px; }
+  #keys button { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #fff; padding: 9px 14px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; transition: background .15s; }
+  #keys button:hover { background: rgba(255,255,255,.18); } #keys button .ic { font-size: 16px; }
+  #keys button.main { background: rgba(52,211,255,.16); border-color: rgba(52,211,255,.5); }
+  #keys .kh { margin-top: 8px; color: var(--muted); white-space: nowrap; } #keys .kh kbd { margin: 0 4px 0 0; }
+  #hitFx { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(160,20,20,.55) 85%, rgba(120,0,0,.8) 100%); }
+  #sticks { position: absolute; bottom: 18px; right: 16px; display: flex; gap: 10px; padding: 10px; }
+  .stick { width: 64px; height: 64px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); position: relative; background: rgba(255,255,255,.03); }
+  .stick::before, .stick::after { content: ""; position: absolute; background: rgba(255,255,255,.14); }
+  .stick::before { left: 50%; top: 6px; bottom: 6px; width: 1px; } .stick::after { top: 50%; left: 6px; right: 6px; height: 1px; }
+  .stick .dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--acc2); left: 50%; top: 50%; box-shadow: 0 0 10px var(--acc2); }
+  .stick span { position: absolute; bottom: -2px; left: 0; right: 0; text-align: center; font: 600 9px var(--num); color: var(--muted); letter-spacing: 1px; }
+  #sticks { flex-direction: row; } #sticks .sw { text-align: center; }
+
+  #drillBar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px; pointer-events: auto; border-radius: 10px; }
+  #drillBar button { display: flex; align-items: center; gap: 8px; border: 1px solid transparent; background: rgba(255,255,255,.05); border-radius: 7px; padding: 6px 12px; color: #dfe6ef; }
+  #drillBar button:hover { background: rgba(255,255,255,.12); }
+  #drillBar button.sel { background: rgba(52,211,255,.18); border-color: var(--acc2); color: #fff; }
+  #drillBar .n { font: 700 13px var(--num); color: var(--muted); } #drillBar .ic { font-size: 16px; width: 18px; text-align: center; }
+  #drillBar .nm { font-weight: 700; font-size: 13.5px; white-space: nowrap; } #drillBar .st { font-size: 11px; color: var(--gold); letter-spacing: 1px; }
+  @media (max-width: 1240px) { #drillBar .txt { display: none; } #drillBar button { padding: 6px 10px; } }
+  @media (max-width: 900px) { #gateBox, #recBox { top: 70px; } }
+
+  #banner { position: fixed; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 700 64px var(--num); letter-spacing: 4px;
+    text-shadow: 0 0 24px currentColor, 0 4px 14px #000; pointer-events: none; white-space: nowrap; }
+  #banner.pop { animation: pop .5s cubic-bezier(.2, 1.5, .4, 1); }
+  @keyframes pop { from { transform: translate(-50%, -50%) scale(.5); opacity: 0; } }
+
+  #result { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(440px, 92vw); padding: 22px 28px 20px; text-align: center;
+    background: var(--glass2); border: 1px solid rgba(255,197,58,.5); box-shadow: 0 0 60px rgba(255,197,58,.18); pointer-events: none;
+    clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); animation: pop .5s cubic-bezier(.2,1.5,.4,1); }
+  #result .k { font: 700 13px var(--num); letter-spacing: 5px; color: var(--gold); }
+  #result .team { font-weight: 900; font-size: 22px; margin-top: 4px; }
+  #result .time { font: 700 58px/1.1 var(--num); margin: 6px 0 2px; }
+  #result .rank { font-weight: 900; font-size: 26px; color: var(--acc); }
+  #result .sub { color: #c9d3e0; font-size: 14px; line-height: 1.7; margin-top: 6px; }
+  #result .stars { font-size: 40px; color: var(--gold); letter-spacing: 6px; }
+  #result .stars i { font-style: normal; color: rgba(255,255,255,.18); }
+  #result .foot { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+
+  /* ================= MENU ================= */
+  #menu { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-columns: minmax(330px, 420px) 1fr; grid-template-rows: auto 1fr auto;
+    background: linear-gradient(90deg, rgba(5,8,14,.94) 0%, rgba(5,8,14,.78) 32%, rgba(5,8,14,.15) 62%, rgba(5,8,14,.35) 100%),
+                linear-gradient(0deg, rgba(5,8,14,.9) 0%, rgba(5,8,14,0) 34%); overflow-y: auto; }
+  .m-top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 22px 34px 0; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .b1 { font: 700 42px/1 var(--num); letter-spacing: 2px; color: var(--acc); text-shadow: 0 0 22px rgba(45,255,143,.45); }
+  .brand .b2 { font: 700 26px/1 var(--num); letter-spacing: 6px; }
+  .brand .ko { font-size: 13px; color: var(--muted); letter-spacing: 1px; margin-left: 6px; }
+  .m-meta { font-size: 13px; color: var(--muted); text-align: right; line-height: 1.7; }
+  .m-meta b { color: #fff; font-family: var(--num); font-size: 15px; } .m-meta a { color: var(--acc2); text-decoration: none; font-weight: 700; }
+  .m-left { padding: 2.4vh 34px; display: flex; flex-direction: column; gap: 2vh; }
+  .field label { display: block; font: 700 12px var(--num); letter-spacing: 3px; color: var(--muted); margin-bottom: 8px; }
+  #team { width: 100%; font: 900 24px "Noto Sans KR", sans-serif; color: #fff; background: rgba(255,255,255,.05); border: 1px solid var(--edge);
+    border-bottom: 2px solid var(--acc); padding: 12px 14px; outline: none; border-radius: 4px; }
+  #team:focus { background: rgba(255,255,255,.09); } #team.need { border-bottom-color: var(--bad); animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  .speed { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .speed button { background: rgba(255,255,255,.05); border: 1px solid var(--edge); border-radius: 6px; padding: 10px 8px 9px; text-align: left; }
+  .speed button:hover { background: rgba(255,255,255,.1); }
+  .speed button.sel { border-color: var(--acc2); background: rgba(52,211,255,.14); }
+  .speed .bars { display: flex; gap: 3px; margin-bottom: 7px; } .speed .bars i { width: 14px; height: 5px; background: rgba(255,255,255,.18); border-radius: 1px; }
+  .speed .bars i.on { background: var(--acc2); }
+  .speed .t1 { font: 700 18px var(--num); } .speed .t2 { font-size: 12px; color: var(--muted); }
+  .speed button:disabled { opacity: .3; cursor: not-allowed; }
+  .tune { background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 12px; }
+  .tune summary { cursor: pointer; font-size: 13.5px; font-weight: 700; color: #dfe6ef; }
+  .tune[open] summary { margin-bottom: 8px; }
+  .trow { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 12.5px; color: #c9d3e0; }
+  .trow label { flex: 0 0 150px; display: flex; align-items: center; gap: 6px; }
+  .trow input[type=range] { flex: 1; accent-color: var(--acc2); }
+  .trow span { width: 48px; white-space: nowrap; text-align: right; font: 700 13px var(--num); color: #fff; }
+  .trow .thint { flex: 1; width: auto; text-align: left; font: 400 11.5px "Noto Sans KR"; color: var(--muted); }
+  .trow button { background: rgba(255,255,255,.1); border: 1px solid var(--edge); border-radius: 5px; padding: 5px 10px; font-size: 12px; }
+  .treset { width: 100%; margin: 2px 0 8px; padding: 8px 10px; font-size: 13px; font-weight: 700; color: #fff;
+    background: rgba(255,197,58,.14); border: 1px solid rgba(255,197,58,.5); border-radius: 6px; }
+  .treset:hover { background: rgba(255,197,58,.26); }
+  .tchk { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12.5px; color: #c9d3e0; margin: 6px 0; }
+  .mdesc { margin-top: 8px; font-size: 12.5px; line-height: 1.6; color: #cdd6e2; background: rgba(52,211,255,.07); border-left: 3px solid var(--acc2); padding: 8px 10px; border-radius: 0 6px 6px 0; }
+  .ctrl { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); border-radius: 6px; padding: 9px 10px 9px 14px; }
+  .ctrl .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .ctrl.ok .dot { background: var(--acc); box-shadow: 0 0 8px var(--acc); } .ctrl.wait .dot { background: var(--gold); } .ctrl.bad .dot { background: var(--bad); }
+  #connStatus { flex: 1; font-size: 13.5px; }
+  .ctrl button { background: rgba(255,255,255,.1); border: 1px solid var(--edge); border-radius: 5px; padding: 6px 12px; font-size: 13px; font-weight: 700; }
+  .ctrl button:hover { background: rgba(255,255,255,.18); }
+  .play { position: relative; font: 700 24px var(--num); letter-spacing: 4px; color: #04150c; background: var(--acc); border: 0; padding: 16px 20px;
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); box-shadow: 0 0 30px rgba(45,255,143,.35); transition: filter .15s; }
+  .play:hover { filter: brightness(1.12); } .play .ko { font: 900 18px "Noto Sans KR"; letter-spacing: 1px; margin-right: 10px; }
+  .play kbd { color: #04150c; border-color: rgba(0,0,0,.35); background: rgba(0,0,0,.1); vertical-align: middle; }
+  @media (max-height: 1000px) { .howto { display: none !important; } }
+  .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .howto div { background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.75; color: #cdd6e2; }
+  .howto b { display: block; font: 700 12px var(--num); letter-spacing: 2px; color: var(--acc2); margin-bottom: 2px; }
+  .m-maps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 0 34px 28px; align-self: end; }
+  @media (max-width: 1000px) { #menu { grid-template-columns: 1fr; } .m-maps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .mapcard { position: relative; text-align: left; border: 1px solid var(--edge); padding: 0; overflow: hidden; border-radius: 8px; background: #0b1018;
+    transition: transform .2s, border-color .2s, box-shadow .2s; }
+  .mapcard:hover { transform: translateY(-3px); }
+  .mapcard.sel { border-color: var(--acc); box-shadow: 0 0 0 1px var(--acc), 0 10px 40px rgba(45,255,143,.18); transform: translateY(-4px); }
+  .mapcard .art { height: clamp(70px, 11vh, 118px); position: relative; background-size: cover; background-position: center; }
+  .mapcard .diff { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: #c5cfdc; }
+  .mapcard .diff .dots { display: flex; gap: 3px; } .mapcard .diff .dots i { width: 16px; height: 6px; border-radius: 2px; background: rgba(255,255,255,.14); }
+  .mapcard .diff .dots i.on { background: var(--d); box-shadow: 0 0 6px var(--d); } .mapcard .diff b { color: var(--d); }
+  .mapcard .ft { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .mapcard .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, #0b1018 0%, rgba(11,16,24,0) 70%); }
+  .mapcard .no { position: absolute; right: 12px; top: 6px; font: 700 44px/1 var(--num); color: rgba(255,255,255,.22); z-index: 1; }
+  .mapcard .lv { position: absolute; left: 12px; top: 12px; z-index: 1; font: 700 11px var(--num); letter-spacing: 2px; padding: 3px 8px; border-radius: 3px; background: rgba(0,0,0,.45); color: #fff; }
+  .mapcard .body { padding: 2px 14px 14px; }
+  .mapcard .nm { font-weight: 900; font-size: 20px; } .mapcard .sb { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .mapcard .st { display: flex; gap: 14px; margin-top: 10px; font: 600 13px var(--num); color: #c5cfdc; letter-spacing: .5px; }
+  .mapcard .rec { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--edge); font-size: 12.5px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mapcard .rec b { font-family: var(--num); font-size: 15px; }
+  #loading { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--bg); font: 700 20px var(--num); letter-spacing: 6px; color: var(--acc); }
+</style>
+</head>
+<body class="in-menu">
+<canvas id="view"></canvas>
+<canvas id="overlay"></canvas>
+
+<div id="hud">
+  <div id="drillBar" class="glass hidden"></div>
+  <div id="timerWrap">
+    <div id="timerBox" class="glass"><div class="lbl">TIME</div><div id="timer" class="idle">0:00.000</div></div>
+    <div id="delta"></div>
+    <div id="hint"></div>
+  </div>
+  <div id="gateBox" class="glass">
+    <div class="cap">GATE</div>
+    <div id="gateNum">0<small>/0</small></div>
+    <div id="gateBar"></div>
+    <div id="teamBox"><div id="hudTeam"></div><div id="hudMap"></div></div>
+  </div>
+  <div id="recBox" class="glass"></div>
+  <div id="osd" class="glass">
+    <div><span class="v" id="spd">0</span><span class="u">KM/H</span></div>
+    <div><span class="v" id="alt">0.0</span><span class="u">M</span></div>
+    <div class="lv" id="lvl">2단</div>
+  </div>
+  <div id="keys" class="glass"></div>
+  <div id="sticks" class="glass">
+    <div class="stick" id="stickL"><div class="dot"></div><span>THR · YAW</span></div>
+    <div class="stick" id="stickR"><div class="dot"></div><span>PIT · ROLL</span></div>
+  </div>
+</div>
+<div id="hitFx"></div>
+<div id="banner"></div>
+<div id="result" class="hidden"></div>
+
+<div id="menu">
+  <header class="m-top">
+    <div class="brand"><span class="b1">FPV</span><span class="b2">DRONE RACE</span><span class="ko" id="titleKo"></span></div>
+    <div class="m-meta">수업 코드 <b id="roomTag"></b><br><a id="boardLink" target="_blank">교실 순위 화면 열기 ↗</a></div>
+  </header>
+  <section class="m-left">
+    <div class="field"><label>TEAM · 팀 이름</label><input id="team" maxlength="16" placeholder="예: 3조 B팀" autocomplete="off"></div>
+    <div class="field"><label>FLIGHT MODE · 비행 모드</label><div class="speed" id="modeSeg"></div><div class="mdesc" id="modeDesc"></div></div>
+    <div class="field"><label>SPEED · 최고 속도</label><div class="speed" id="speedSeg"></div></div>
+    <div class="field"><label>CONTROLLER · 조종기</label>
+      <div class="ctrl" id="ctrlBox"><span class="dot"></span><span id="connStatus">연결 안 됨 · 키보드로 조종</span><button id="btnConnect">연결</button><button id="btnCalib" title="스틱에서 손을 떼고 누르세요">보정</button></div>
+    </div>
+    <details class="tune" id="tuneBox">
+      <summary>조종 설정 · 감도 · 카메라 각도</summary>
+      <button class="treset" id="tReset">↺ 기본값으로 되돌리기</button>
+      <div class="trow"><label>감도 (회전·기울기 빠르기)</label><input type="range" id="tRate" min="30" max="150" step="5"><span id="tRateV"></span></div>
+      <div class="trow"><label>엑스포 (가운데 부드럽게)</label><input type="range" id="tExpo" min="0" max="90" step="5"><span id="tExpoV"></span></div>
+      <div class="trow"><label>스로틀 감도 (상승 힘)</label><input type="range" id="tThr" min="40" max="150" step="5"><span id="tThrV"></span></div>
+      <div class="trow"><label>데드존 (스틱 떨림 무시)</label><input type="range" id="tDead" min="0" max="20" step="1"><span id="tDeadV"></span></div>
+      <div class="trow"><label><input type="checkbox" id="tCamAuto"> 카메라 각도 자동</label><input type="range" id="tCam" min="0" max="45" step="1"><span id="tCamV"></span></div>
+      <div class="trow"><label>시야각 (FOV)</label><input type="range" id="tFov" min="70" max="120" step="1"><span id="tFovV"></span></div>
+      <div class="tchk">
+        <label><input type="checkbox" id="tInvT"> 스로틀 반전</label><label><input type="checkbox" id="tInvY"> 회전 반전</label>
+        <label><input type="checkbox" id="tInvP"> 전후 반전</label><label><input type="checkbox" id="tInvR"> 좌우 반전</label>
+      </div>
+      <div class="trow"><span class="thint">아크로가 어려우면 감도를 50~70%, 엑스포를 50% 이상으로 낮춰 보세요.</span></div>
+    </details>
+    <button class="play" id="btnPlay"><span class="ko">비행 시작</span>START <kbd>Enter</kbd></button>
+    <div class="howto">
+      <div><b>LEFT STICK</b>↑↓ 상승 / 하강<br>←→ 왼쪽 / 오른쪽 회전</div>
+      <div><b>RIGHT STICK</b>↑↓ 전진 / 후진<br>←→ 왼쪽 / 오른쪽 이동</div>
+    </div>
+  </section>
+  <section class="m-maps" id="mapCards"></section>
+</div>
+<div id="loading">LOADING</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script><script src="config.js"></script>
+<script src="records.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
