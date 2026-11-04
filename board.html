@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Leaderboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05070d; --card: rgba(14, 19, 30, 0.72); --edge: rgba(255, 255, 255, 0.08); --text: #eef3fa; --muted: #7d8aa0;
+    --acc: #2dff8f; --acc2: #34d3ff; --gold: #ffc53a; --silver: #cfd8e6; --bronze: #e8925a; --live: #ff3b55;
+    --num: "Rajdhani", "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font-family: "Noto Sans KR", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  /* 배경: 은은한 빛 + 원근 격자 */
+  .bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    background: radial-gradient(1200px 600px at 15% -10%, rgba(52, 211, 255, .16), transparent 60%),
+                radial-gradient(900px 600px at 95% 10%, rgba(255, 79, 216, .12), transparent 60%),
+                radial-gradient(1000px 500px at 50% 120%, rgba(45, 255, 143, .10), transparent 60%), var(--bg); }
+  .bg .grid { position: absolute; left: -50%; right: -50%; bottom: -10%; height: 55%;
+    background-image: linear-gradient(rgba(52, 211, 255, .14) 1px, transparent 1px), linear-gradient(90deg, rgba(52, 211, 255, .14) 1px, transparent 1px);
+    background-size: 60px 60px; transform: perspective(500px) rotateX(62deg); transform-origin: bottom;
+    mask-image: linear-gradient(to top, rgba(0,0,0,.9), transparent 85%); -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,.9), transparent 85%);
+    animation: gridMove 6s linear infinite; }
+  @keyframes gridMove { to { background-position: 0 60px, 0 0; } }
+  .bg .beam { position: absolute; top: -20%; width: 30vw; height: 140%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.035), transparent);
+    transform: rotate(18deg); animation: beam 14s ease-in-out infinite; }
+  @keyframes beam { 0% { left: -40vw; } 100% { left: 120vw; } }
+
+  .wrap { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 2.2vh 2vw 1.6vh; gap: 2vh; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .logo { width: clamp(40px, 3.6vw, 64px); height: clamp(40px, 3.6vw, 64px); }
+  .brand .t1 { font: 700 clamp(14px, 1.1vw, 20px) var(--num); letter-spacing: .5em; color: var(--acc); }
+  .brand .t2 { font-weight: 900; font-size: clamp(24px, 2.6vw, 50px); line-height: 1.1; letter-spacing: -.01em; }
+  .center { text-align: center; }
+  .center .k { font: 700 clamp(12px, 1vw, 18px) var(--num); letter-spacing: .6em; color: var(--muted); }
+  .center .v { font: 700 clamp(22px, 2.2vw, 42px) var(--num); letter-spacing: .12em;
+    background: linear-gradient(180deg, #fff, #9fb4d0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .meta { display: flex; align-items: center; gap: 14px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font: 700 clamp(12px, .95vw, 17px) var(--num); letter-spacing: .2em;
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+  .pill.live { color: #fff; background: rgba(255, 59, 85, .16); border-color: rgba(255, 59, 85, .5); }
+  .pill.live i { width: 9px; height: 9px; border-radius: 50%; background: var(--live); box-shadow: 0 0 10px var(--live); animation: pulse 1.4s infinite; }
+  .pill.local { color: var(--gold); border-color: rgba(255,197,58,.4); } .pill.local i { background: var(--gold); box-shadow: none; animation: none; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  .pill b { color: var(--acc2); letter-spacing: .05em; }
+  #clock { font: 700 clamp(18px, 1.6vw, 30px) var(--num); letter-spacing: .08em; color: #c9d4e4; min-width: 5.2em; text-align: right; }
+  .btn { font: 700 13px "Noto Sans KR"; color: var(--text); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  .btn:hover { background: rgba(255,255,255,.12); }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6vw; }
+  main.solo { grid-template-columns: minmax(0, 1fr); } main.solo .board:not(.big) { display: none; }
+  @media (max-width: 900px) { html, body { overflow: auto; } main { grid-template-columns: minmax(0, 1fr); } }
+  .board { position: relative; display: flex; flex-direction: column; min-height: 0; border-radius: 16px; overflow: hidden; cursor: pointer;
+    background: var(--card); border: 1px solid var(--edge); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
+  .bhead { position: relative; padding: 1.8vh 1.4vw 1.6vh; overflow: hidden; }
+  .bhead::before { content: ""; position: absolute; inset: 0; background: var(--art); opacity: .85; }
+  .bhead::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(14,19,30,1) 0%, rgba(14,19,30,.2) 70%); }
+  .bhead > * { position: relative; z-index: 1; }
+  .bhead .row1 { display: flex; justify-content: space-between; align-items: center; }
+  .tag { font: 700 clamp(11px, .8vw, 14px) var(--num); letter-spacing: .25em; padding: 4px 10px; border-radius: 4px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18); }
+  .bhead .no { font: 700 clamp(30px, 3vw, 56px)/1 var(--num); color: rgba(255,255,255,.22); }
+  .bhead .nm { font-weight: 900; font-size: clamp(22px, 2vw, 40px); margin-top: .4vh; letter-spacing: -.01em; }
+  .bhead .sb { font-size: clamp(11px, .85vw, 15px); color: #c3cee0; margin-top: 2px; }
+  .bhead .stat { font: 600 clamp(11px, .85vw, 15px) var(--num); letter-spacing: .15em; color: #aab7cb; margin-top: .8vh; }
+  .dstar { color: var(--gold); letter-spacing: .1em; } .dstar i { font-style: normal; color: rgba(255,255,255,.2); }
+  .rows { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: .6vh .8vw 1.2vh; gap: .45vh; }
+  .r { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 2.3em minmax(0, 1fr) auto auto; align-items: center; gap: .8em;
+    padding: 0 .9em; border-radius: 10px; font-size: clamp(13px, 1.15vw, 24px); background: rgba(255,255,255,.025); overflow: hidden; }
+  .r.podium { flex: 1.45; font-size: clamp(15px, 1.45vw, 30px); background: rgba(255,255,255,.05); }
+  .r .rk { font: 700 1.25em/1 var(--num); text-align: center; color: var(--muted); }
+  .r .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r .lv { font: 700 .58em var(--num); letter-spacing: .1em; color: var(--muted); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 6px; }
+  .r .tm { font: 700 1.2em var(--num); letter-spacing: .02em; font-variant-numeric: tabular-nums; text-align: right; min-width: 4.6em; }
+  .r.p1 { background: linear-gradient(90deg, rgba(255,197,58,.22), rgba(255,197,58,.04) 70%); box-shadow: inset 0 0 0 1px rgba(255,197,58,.45); }
+  .r.p1 .rk { color: var(--gold); text-shadow: 0 0 16px rgba(255,197,58,.7); } .r.p1 .tm { color: var(--gold); }
+  .r.p2 { background: linear-gradient(90deg, rgba(207,216,230,.14), rgba(207,216,230,.03) 70%); } .r.p2 .rk { color: var(--silver); }
+  .r.p3 { background: linear-gradient(90deg, rgba(232,146,90,.15), rgba(232,146,90,.03) 70%); } .r.p3 .rk { color: var(--bronze); }
+  .r.empty { background: rgba(255,255,255,.012); } .r.empty .nm, .r.empty .tm { color: rgba(255,255,255,.12); font-weight: 500; }
+  .r .badge { font: 700 .55em var(--num); letter-spacing: .15em; padding: 2px 7px; border-radius: 4px; background: var(--acc); color: #04150c; margin-left: .5em; vertical-align: middle; }
+  .r.hot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
+    transform: translateX(-100%); animation: sweep 1.1s ease-out 3; }
+  .r.hot { box-shadow: inset 0 0 0 1px var(--acc), 0 0 24px rgba(45,255,143,.25); }
+  @keyframes sweep { to { transform: translateX(100%); } }
+  footer { display: flex; align-items: center; gap: 1.2vw; padding: 1vh 1.2vw; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid var(--edge); }
+  footer .lab { font: 700 clamp(11px, .85vw, 15px) var(--num); letter-spacing: .35em; color: var(--acc2); white-space: nowrap; }
+  .ticker { flex: 1; overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .ticker .track { display: inline-flex; gap: 14px; animation: tick 40s linear infinite; padding-left: 100%; }
+  .chip { display: inline-flex; align-items: center; gap: 10px; font-size: clamp(12px, .95vw, 17px); padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); }
+  .chip b { font: 700 1.1em var(--num); } .chip .m { color: var(--muted); } .chip.pb { border-color: rgba(45,255,143,.5); } .chip.pb .t { color: var(--acc); }
+  @keyframes tick { to { transform: translateX(-100%); } }
+
+  /* 신기록 연출 */
+  #nr { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: radial-gradient(circle at center, rgba(10,8,0,.55), rgba(0,0,0,.88)); }
+  #nr .rays { position: absolute; width: 160vmax; height: 160vmax; background: repeating-conic-gradient(from 0deg, rgba(255,197,58,.10) 0 6deg, transparent 6deg 18deg);
+    animation: spin 18s linear infinite; mask-image: radial-gradient(circle, #000 0%, transparent 55%); -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 55%); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #nr .box { position: relative; text-align: center; animation: rise .7s cubic-bezier(.2, 1.4, .3, 1); }
+  @keyframes rise { from { transform: translateY(40px) scale(.85); opacity: 0; } }
+  #nr .k { font: 700 clamp(14px, 1.6vw, 28px) var(--num); letter-spacing: .7em; color: var(--gold); }
+  #nr .t1 { font: 700 clamp(46px, 7vw, 140px)/1 var(--num); letter-spacing: .04em; margin-top: 1vh;
+    background: linear-gradient(180deg, #fff 10%, #ffd877 55%, #ff9d2e 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 30px rgba(255, 170, 40, .45)); }
+  #nr .team { font-weight: 900; font-size: clamp(40px, 6vw, 120px); margin-top: 2vh; letter-spacing: -.01em; }
+  #nr .info { margin-top: 1.4vh; font-size: clamp(16px, 1.8vw, 34px); color: #c9d4e4; }
+  #nr .info b { font: 700 1.25em var(--num); color: var(--gold); margin-left: .4em; }
+  #confetti { position: fixed; inset: 0; z-index: 41; pointer-events: none; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bg"><div class="beam"></div><div class="grid"></div></div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" fill="none" stroke="#2dff8f" stroke-width="3">
+        <circle cx="14" cy="14" r="8"/><circle cx="50" cy="14" r="8"/><circle cx="14" cy="50" r="8"/><circle cx="50" cy="50" r="8"/>
+        <path d="M20 20 L28 28 M44 20 L36 28 M20 44 L28 36 M44 44 L36 36"/><rect x="26" y="26" width="12" height="12" rx="3" fill="#2dff8f" stroke="none"/>
+      </svg>
+      <div><div class="t1">FPV DRONE RACE</div><div class="t2" id="title">드론 레이스</div></div>
+    </div>
+    <div class="center"><div class="k">LIVE</div><div class="v">LEADERBOARD</div></div>
+    <div class="meta">
+      <span class="pill" id="conn"><i></i><span id="connTxt">CONNECTING</span></span>
+      <span class="pill">ROOM <b id="room"></b></span>
+      <span id="clock"></span>
+      <button class="btn" id="btnSound">🔊 소리 켜기</button>
+      <button class="btn hidden" id="btnClear">기록 초기화</button>
+    </div>
+  </header>
+  <main id="grid"></main>
+  <footer>
+    <span class="lab">RECENT</span>
+    <div class="ticker"><div class="track" id="ticker"><span class="chip">아직 완주 기록이 없습니다 — 첫 번째 주인공은 누구?</span></div></div>
+  </footer>
+</div>
+<div id="nr" class="hidden"><div class="rays"></div><div class="box"><div class="k">NEW TRACK RECORD</div><div class="t1">1ST PLACE</div><div class="team" id="nrTeam"></div><div class="info" id="nrInfo"></div></div></div>
+<canvas id="confetti" class="hidden"></canvas>
+
+<script src="config.js"></script>
+<script src="records.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const CFG = window.SIM_CONFIG || {};
+const N = 10;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = t => { const m = Math.floor(t / 60), s = t - m * 60; return `${m}:${s.toFixed(3).padStart(6, "0")}`; };
+const RANKED = Records.MAP_INFO.filter(m => m.ranked);   // 교육용 맵은 순위 없음
+const ART = {
+  field: "linear-gradient(120deg,#ff9b5c 0%,#b3507e 50%,#2c3f7a 100%)",
+  warehouse: "linear-gradient(120deg,#1d2733 0%,#2d5577 55%,#00cfff 120%)",
+  city: "linear-gradient(120deg,#120c33 0%,#5a2390 55%,#ff4fd8 120%)",
+};
+
+$("title").textContent = CFG.title || "FPV 드론 레이스";
+$("room").textContent = Records.room;
+document.title = `Live Leaderboard · ${Records.room}`;
+setInterval(() => { const d = new Date(), p = n => String(n).padStart(2, "0"); $("clock").textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }, 1000);
+
+$("grid").innerHTML = RANKED.map((m, i) => `
+  <section class="board" data-map="${m.id}" style="--art:${ART[m.id]}">
+    <div class="bhead"><div class="row1"><span class="tag">${m.level}</span><span class="no">0${i + 2}</span></div>
+      <div class="nm">${m.name}</div><div class="sb">${m.sub}</div>
+      <div class="stat">GATES ${m.gates || "—"} · 난이도 <span class="dstar">${"★".repeat(m.diff)}<i>${"★".repeat(5 - m.diff)}</i></span> ${m.diffName}</div></div>
+    <div class="rows" id="rows-${m.id}"></div>
+  </section>`).join("");
+document.querySelectorAll(".board").forEach(p => p.onclick = () => {
+  const solo = !p.classList.contains("big");
+  document.querySelectorAll(".board").forEach(x => x.classList.remove("big"));
+  p.classList.toggle("big", solo); $("grid").classList.toggle("solo", solo);
+});
+
+// ---------- 사운드 ----------
+let actx = null;
+function bell(f, t0, d = 1.2, v = 0.07) {
+  if (!actx) return;
+  const t = actx.currentTime + t0;
+  for (const [mul, vol] of [[1, 1], [2.01, 0.35], [3.02, 0.15]]) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine"; o.frequency.value = f * mul;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d);
+  }
+}
+const chime = () => { bell(1318, 0, 0.8); bell(1760, 0.09, 1.0); };
+const fanfare = () => [[523, 0], [659, 0.12], [784, 0.24], [1046, 0.38], [784, 0.62], [1046, 0.74]].forEach(([f, t]) => bell(f, t, 1.4, 0.08));
+$("btnSound").onclick = () => { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); chime(); $("btnSound").classList.add("hidden"); };
+
+// ---------- 순위 렌더 (순위가 바뀌면 줄이 부드럽게 이동) ----------
+const prev = {};
+const queue = []; let busy = false;
+function render(mapId, list) {
+  const box = $("rows-" + mapId);
+  const old = prev[mapId], now = new Map(list.map((r, i) => [Records.teamKey(r.team), { t: r.time, i }]));
+  const changed = new Set(), rankUp = {};
+  if (old) for (const [k, v] of now) {
+    const o = old.get(k);
+    if (!o || v.t < o.t) changed.add(k);
+    if (o && v.i < o.i) rankUp[k] = o.i - v.i;
+  }
+  prev[mapId] = now;
+  const before = new Map([...box.children].filter(e => e.dataset.k).map(e => [e.dataset.k, e.getBoundingClientRect().top]));
+  let html = "";
+  for (let i = 0; i < N; i++) {
+    const r = list[i], cls = `r ${i < 3 ? "podium p" + (i + 1) : ""}`;
+    if (!r) { html += `<div class="${cls} empty"><span class="rk">${i + 1}</span><span class="nm">—</span><span></span><span class="tm">-:--.---</span></div>`; continue; }
+    const k = Records.teamKey(r.team), hot = changed.has(k);
+    const badge = hot ? `<span class="badge">${rankUp[k] ? "▲" + rankUp[k] : old && !old.has(k) ? "NEW" : "PB"}</span>` : "";
+    html += `<div class="${cls} ${hot ? "hot" : ""}" data-k="${esc(k)}"><span class="rk">${i + 1}</span><span class="nm">${esc(r.team)}${badge}</span>` +
+      `<span class="lv">${Records.MODE_NAME[r.mode || "angle"] || ""} ${Records.LEVEL_NAME[r.level] || ""}</span><span class="tm">${fmt(r.time)}</span></div>`;
+  }
+  box.innerHTML = html;
+  for (const el of box.children) {           // FLIP: 이전 위치에서 새 위치로 미끄러지듯 이동
+    const b = before.get(el.dataset.k); if (b === undefined) continue;
+    const dy = b - el.getBoundingClientRect().top; if (!dy) continue;
+    el.animate([{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }], { duration: 700, easing: "cubic-bezier(.2,.8,.2,1)" });
+  }
+  if (!old) return;
+  const info = Records.MAP_INFO.find(m => m.id === mapId);
+  let rec = false;
+  list.forEach((r, i) => {
+    if (!changed.has(Records.teamKey(r.team)) || i !== 0) return;
+    const q = queue.findIndex(x => x.info.id === mapId);       // 같은 맵은 가장 최근 1위만 연출
+    if (q >= 0) queue[q] = { r, info }; else queue.push({ r, info });
+    rec = true;
+  });
+  if (changed.size && !rec) chime();
+  nextRecord();
+}
+function nextRecord() {
+  if (busy || !queue.length) return;
+  busy = true;
+  const { r, info } = queue.shift();
+  $("nrTeam").textContent = r.team;
+  $("nrInfo").innerHTML = `${esc(info.name)}<b>${fmt(r.time)}</b>`;
+  $("nr").classList.remove("hidden"); fanfare(); confetti(4800);
+  setTimeout(() => { $("nr").classList.add("hidden"); busy = false; setTimeout(nextRecord, 400); }, 5200);
+}
+// 꽃가루
+function confetti(ms) {
+  const cv = $("confetti"), g = cv.getContext("2d"), dpr = Math.min(devicePixelRatio, 2);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; cv.classList.remove("hidden");
+  const cols = ["#ffc53a", "#2dff8f", "#34d3ff", "#ff4fd8", "#ffffff"];
+  const ps = Array.from({ length: 180 }, () => ({ x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.6, vx: (Math.random() - 0.5) * 3 * dpr,
+    vy: (2 + Math.random() * 4) * dpr, s: (5 + Math.random() * 7) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: cols[(Math.random() * 5) | 0] }));
+  const end = performance.now() + ms;
+  (function step(t) {
+    g.clearRect(0, 0, cv.width, cv.height);
+    for (const p of ps) {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr; p.vx += Math.sin(p.y / 60) * 0.05;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); g.restore();
+    }
+    if (t < end) requestAnimationFrame(step); else { g.clearRect(0, 0, cv.width, cv.height); cv.classList.add("hidden"); }
+  })(performance.now());
+}
+RANKED.forEach(m => Records.subscribeTop(m.id, N, list => render(m.id, list)));
+
+// ---------- 최근 완주 ----------
+Records.subscribeFeed(12, list => {
+  if (!list.length) return;
+  const names = Object.fromEntries(Records.MAP_INFO.map(m => [m.id, m.name]));
+  $("ticker").innerHTML = list.filter(e => names[e.map]).map(e =>
+    `<span class="chip ${e.improved ? "pb" : ""}"><b>${esc(e.team)}</b><span class="m">${names[e.map]}</span><b class="t">${fmt(e.time)}</b>${e.improved ? "<span class='m'>PB</span>" : ""}</span>`).join("");
+});
+
+// ---------- 연결 상태 ----------
+Records.ready.then(() => {
+  const online = Records.kind === "online";
+  $("conn").classList.add(online ? "live" : "local");
+  $("connTxt").textContent = online ? "LIVE" : "LOCAL";
+  $("conn").title = online ? "온라인 · 모든 PC 기록 실시간 반영" : "로컬 모드 · 이 PC 기록만 표시";
+  if (!online) {
+    $("btnClear").classList.remove("hidden");
+    $("btnClear").onclick = () => { if (confirm("이 PC에 저장된 이 수업 코드의 기록을 모두 지울까요?")) Records.clearLocal(); };
+  }
+});
+</script>
+</body>
+</html>
