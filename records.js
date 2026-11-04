@@ -39,11 +39,29 @@
     const db = firebase.firestore();
     const ts = () => firebase.firestore.FieldValue.serverTimestamp();
     const roomDoc = db.collection("rooms").doc(room);
-    const best = m => roomDoc.collection("best_" + m);
-    const feed = roomDoc.collection("feed");
+    // 기록 초기화 = 회차(season) 번호를 올림 → 새 회차는 빈 컬렉션 사용 (온라인 기록은 지울 수 없어서)
+    const meta = roomDoc.collection("meta").doc("season");
+    let season = 0, seasonReady;
+    const seasonLoaded = new Promise(r => { seasonReady = r; });
+    const sfx = () => (season ? "_s" + season : "");
+    const best = m => roomDoc.collection("best_" + m + sfx());
+    const feed = () => roomDoc.collection("feed" + sfx());
+    const subs = new Set();
+    meta.onSnapshot(d => {
+      const n = d.exists ? (d.data().n || 0) : 0, changed = n !== season;
+      season = n; seasonReady();
+      if (changed) subs.forEach(s => { if (s.unsub) { s.unsub(); s.unsub = s.start(); } });   // 새 회차로 다시 구독
+    }, err => { console.warn("season", err); seasonReady(); });
+    const sub = start => {
+      const s = { start, unsub: null };
+      subs.add(s);
+      seasonLoaded.then(() => { if (subs.has(s) && !s.unsub) s.unsub = s.start(); });
+      return () => { subs.delete(s); if (s.unsub) s.unsub(); };
+    };
     return {
       kind: "online",
       async submit(e) {
+        await seasonLoaded;
         const ref = best(e.map).doc(teamKey(e.team));
         let improved = false, prev = null;
         await db.runTransaction(async tx => {
@@ -52,19 +70,20 @@
           improved = prev === null || e.time < prev;
           if (improved) tx.set(ref, Object.assign({}, e, { at: ts() }));
         });
-        feed.add(Object.assign({}, e, { improved, at: ts() })).catch(err => console.warn(err));
+        feed().add(Object.assign({}, e, { improved, at: ts() })).catch(err => console.warn(err));
         const myBest = improved ? e.time : prev;
         const faster = await best(e.map).where("time", "<", myBest).get();
         return { improved, prev, rank: faster.size + 1 };
       },
       subscribeTop(map, n, cb) {
-        return best(map).orderBy("time").limit(n)
-          .onSnapshot(s => cb(s.docs.map(d => d.data())), err => console.warn("top", err));
+        return sub(() => best(map).orderBy("time").limit(n)
+          .onSnapshot(s => cb(s.docs.map(d => d.data())), err => console.warn("top", err)));
       },
       subscribeFeed(n, cb) {
-        return feed.orderBy("at", "desc").limit(n)
-          .onSnapshot(s => cb(s.docs.map(d => d.data())), err => console.warn("feed", err));
+        return sub(() => feed().orderBy("at", "desc").limit(n)
+          .onSnapshot(s => cb(s.docs.map(d => d.data())), err => console.warn("feed", err)));
       },
+      async clear() { await seasonLoaded; await meta.set({ n: season + 1, at: ts() }); },
     };
   }
 
@@ -133,6 +152,7 @@
       : Promise.resolve({ practice: true }),
     subscribeTop: sub("subscribeTop"),
     subscribeFeed: sub("subscribeFeed"),
+    reset: () => ready.then(i => i.clear && i.clear()),          // 이 수업 코드의 순위·최근 기록 초기화
     clearLocal: () => ready.then(i => i.clear && i.clear()),
   };
 })();
