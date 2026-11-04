@@ -676,7 +676,7 @@ function drawOverlay() {
     }
     // 위: 게이트 번호(작게) / 아래: 남은 거리(크게) — 번호를 거리로 착각하지 않게 분리
     og.shadowBlur = 0; og.font = `700 ${15 * dpr}px Rajdhani, sans-serif`; og.textAlign = "center";   // 거리만 표시 (게이트 번호 없음)
-    og.fillText(`${dist < 10 ? dist.toFixed(1) : dist.toFixed(0)} M`, x, y - s - 8 * dpr);
+    og.fillText(`${Math.max(1, Math.round(dist))} M`, x, y - s - 8 * dpr);   // 1m 단위 (소수점 없음)
   } else {
     const cx = w / 2, cy = h / 2, ang = Math.atan2(y - cy, x - cx), rr = Math.min(w, h) / 2 - m;
     og.save(); og.translate(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr); og.rotate(ang);
