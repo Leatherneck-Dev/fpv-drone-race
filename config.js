@@ -10,17 +10,15 @@ window.SIM_CONFIG = {
   // 수업마다 코드를 바꾸면 순위표가 새로 시작됩니다.
   room: "class",
 
-  // 여러 PC의 기록을 한 화면에 모으려면 Firebase 설정을 붙여 넣으세요. (배포안내.md 참고)
-  // null 이면 "로컬 모드": 같은 PC·같은 브라우저 안에서만 순위가 공유됩니다.
-  firebase: null,
-  /*
+  // 여러 PC의 기록을 한 화면에 모으는 Firebase 설정 (프로젝트: fpv-drone-race)
+  // null 로 바꾸면 "로컬 모드": 같은 PC·같은 브라우저 안에서만 순위가 공유됩니다.
+  // (웹 apiKey는 공개돼도 되는 값이고, 보안은 Firestore 규칙이 담당합니다)
   firebase: {
-    apiKey: "여기에",
-    authDomain: "프로젝트.firebaseapp.com",
-    projectId: "프로젝트",
-    appId: "여기에",
+    apiKey: "AIzaSyDashyyNN6Fo6kwcn-0q3lNdOWpwctj0Mw",
+    authDomain: "fpv-drone-race.firebaseapp.com",
+    projectId: "fpv-drone-race",
+    appId: "1:404204779535:web:bbf00ba91d78726d5ecb7a",
   },
-  */
 
   // 학생이 고를 수 있는 최고 속도 단계 (1: 천천히, 2: 보통, 3: 빠르게)
   // 모두 같은 속도로 겨루게 하려면 하나만 남기세요. 예) [2]
