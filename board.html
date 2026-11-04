@@ -263,10 +263,13 @@ function confetti(ms) {
 RANKED.forEach(m => Records.subscribeTop(m.id, N, list => render(m.id, list)));
 
 // ---------- 최근 완주 ----------
+const EMPTY_TICKER = `<span class="chip">아직 완주 기록이 없습니다 — 첫 번째 주인공은 누구?</span>`;
 Records.subscribeFeed(12, list => {
-  if (!list.length) return;
+  if (!list.length) { $("ticker").innerHTML = EMPTY_TICKER; return; }   // 기록 초기화 후에도 비워짐
   const names = Object.fromEntries(Records.MAP_INFO.map(m => [m.id, m.name]));
-  $("ticker").innerHTML = list.filter(e => names[e.map]).map(e =>
+  const shown = list.filter(e => names[e.map]);
+  if (!shown.length) { $("ticker").innerHTML = EMPTY_TICKER; return; }
+  $("ticker").innerHTML = shown.map(e =>
     `<span class="chip ${e.improved ? "pb" : ""}"><b>${esc(e.team)}</b><span class="m">${names[e.map]}</span><b class="t">${fmt(e.time)}</b>${e.improved ? "<span class='m'>PB</span>" : ""}</span>`).join("");
 });
 
