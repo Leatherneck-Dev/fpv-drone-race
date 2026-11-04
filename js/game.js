@@ -635,7 +635,20 @@ function setStick(id, x, y) {
   const d = document.querySelector(`#${id} .dot`);
   d.style.left = (50 + clamp(x, -1, 1) * 40) + "%"; d.style.top = (50 - clamp(y, -1, 1) * 40) + "%";
 }
-const _p = V3();
+const _p = V3(), _gd = V3();
+// 드론에서 게이트 구멍(통과면)의 가장 가까운 점까지 거리 — 옆으로 비껴 날아도 실제 남은 거리
+function gateDist(cp) {
+  _gd.subVectors(drone.pos, cp.o);
+  let x = _gd.dot(cp.r), y = _gd.dot(cp.u);
+  const z = _gd.dot(cp.n);
+  if (cp.shape === "rect") { x = Math.max(0, Math.abs(x) - cp.hw); y = Math.max(0, Math.abs(y) - cp.hh); }
+  else {
+    if (cp.shape === "arch" && y < 0) { x = Math.max(0, Math.abs(x) - cp.R); return Math.hypot(x, y, z); }
+    const rr = Math.hypot(x, y), out = Math.max(0, rr - cp.R);
+    x = rr > 0 ? x / rr * out : 0; y = rr > 0 ? y / rr * out : 0;
+  }
+  return Math.hypot(x, y, z);
+}
 function drawOverlay() {
   const w = overlay.width, h = overlay.height, dpr = overlay._dpr;
   og.clearRect(0, 0, w, h);
@@ -646,16 +659,15 @@ function drawOverlay() {
   og.moveTo(w / 2 - c - g, h / 2); og.lineTo(w / 2 - g, h / 2); og.moveTo(w / 2 + g, h / 2); og.lineTo(w / 2 + c + g, h / 2);
   og.moveTo(w / 2, h / 2 - c - g); og.lineTo(w / 2, h / 2 - g); og.moveTo(w / 2, h / 2 + g); og.lineTo(w / 2, h / 2 + c + g); og.stroke();
   // 다음 목표 표시 (괄호 마커 / 화면 밖이면 화살표)
-  let target = null, label = "";
-  if (race.next < cps.length) { target = cps[race.next].center; label = String(race.next + 1); }
-  else if (finishPad) { target = _v.set(finishPad.x, 0.3, finishPad.z); label = "H"; }
+  let target = null, label = "", dist = 0;
+  if (race.next < cps.length) { const cp = cps[race.next]; target = cp.center; label = String(race.next + 1); dist = gateDist(cp); }
+  else if (finishPad) { target = _v.set(finishPad.x, 0.3, finishPad.z); label = "H"; dist = Math.hypot(drone.pos.x - finishPad.x, drone.pos.z - finishPad.z); }
   if (!target) return;
   _p.copy(target).project(camera);
   const behind = _p.z > 1;
   let x = (_p.x * 0.5 + 0.5) * w, y = (-_p.y * 0.5 + 0.5) * h;
   if (behind) { x = w - x; y = h - y; }
   const m = 60 * dpr, on = !behind && x > m && x < w - m && y > m && y < h - m;
-  const dist = drone.pos.distanceTo(target);
   og.strokeStyle = og.fillStyle = "#2dff8f"; og.lineWidth = 2.5 * dpr; og.shadowColor = "#2dff8f"; og.shadowBlur = 10 * dpr;
   if (on) {
     const s = clamp(260 / Math.max(dist, 1), 14, 60) * dpr, k = s * 0.45;
@@ -663,7 +675,7 @@ function drawOverlay() {
       og.beginPath(); og.moveTo(x + sx * s, y + sy * (s - k)); og.lineTo(x + sx * s, y + sy * s); og.lineTo(x + sx * (s - k), y + sy * s); og.stroke();
     }
     og.shadowBlur = 0; og.font = `700 ${15 * dpr}px Rajdhani, sans-serif`; og.textAlign = "center";
-    og.fillText(`${label}  ·  ${dist.toFixed(0)} M`, x, y - s - 8 * dpr);
+    og.fillText(`${label}  ·  ${dist < 10 ? dist.toFixed(1) : dist.toFixed(0)} M`, x, y - s - 8 * dpr);
   } else {
     const cx = w / 2, cy = h / 2, ang = Math.atan2(y - cy, x - cx), rr = Math.min(w, h) / 2 - m;
     og.save(); og.translate(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr); og.rotate(ang);
@@ -686,7 +698,9 @@ function updateCheckpointStates() {
 let hudGateN = -1;
 function updateHUD(now, inp) {
   const t = race.state === "running" ? race.simTime - race.t0 : race.state === "done" ? race.time : 0;
-  const tm = $("timer"); tm.textContent = fmt(t); tm.className = race.state === "running" ? "" : race.state === "done" ? "done" : "idle";
+  const tm = $("timer"), ts = fmt(t);
+  if (tm.dataset.t !== ts) { tm.dataset.t = ts; tm.innerHTML = ts.replace(/\d/g, d => `<i>${d}</i>`); }
+  tm.className = race.state === "running" ? "" : race.state === "done" ? "done" : "idle";
   $("hint").textContent = race.state === "ready" ? "초록색 1번 게이트를 통과하면 타이머 시작!"
     : race.state === "running" && race.next >= cps.length && finishPad ? "H 착륙장에 착륙하세요!" : "";
   const passed = race.state === "running" ? race.next : 0, total = cps.length + (finishPad ? 1 : 0);
