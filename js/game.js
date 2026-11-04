@@ -674,8 +674,14 @@ function drawOverlay() {
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
       og.beginPath(); og.moveTo(x + sx * s, y + sy * (s - k)); og.lineTo(x + sx * s, y + sy * s); og.lineTo(x + sx * (s - k), y + sy * s); og.stroke();
     }
-    og.shadowBlur = 0; og.font = `700 ${15 * dpr}px Rajdhani, sans-serif`; og.textAlign = "center";
-    og.fillText(`${label}  ·  ${dist < 10 ? dist.toFixed(1) : dist.toFixed(0)} M`, x, y - s - 8 * dpr);
+    // 위: 게이트 번호(작게) / 아래: 남은 거리(크게) — 번호를 거리로 착각하지 않게 분리
+    og.shadowBlur = 0; og.textAlign = "center";
+    const by = y + s + 12 * dpr, bw = 88 * dpr, bh = 44 * dpr;      // 마커 아래에 거리 상자
+    og.fillStyle = "rgba(6,12,10,0.72)"; og.fillRect(x - bw / 2, by, bw, bh);
+    og.font = `700 ${11 * dpr}px Rajdhani, 'Noto Sans KR', sans-serif`; og.fillStyle = "rgba(220,255,235,0.8)";
+    og.fillText(label === "H" ? "착륙장까지" : `GATE ${label} 까지`, x, by + 14 * dpr);
+    og.font = `700 ${22 * dpr}px Rajdhani, sans-serif`; og.fillStyle = "#2dff8f";
+    og.fillText(`${dist < 10 ? dist.toFixed(1) : dist.toFixed(0)} m`, x, by + 37 * dpr);
   } else {
     const cx = w / 2, cy = h / 2, ang = Math.atan2(y - cy, x - cx), rr = Math.min(w, h) / 2 - m;
     og.save(); og.translate(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr); og.rotate(ang);
