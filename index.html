@@ -33,6 +33,7 @@
   #timerBox .lbl { font: 700 11px var(--num); letter-spacing: 3px; color: var(--muted); }
   #timer { font: 700 46px/1 var(--num); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
   #timer.idle { color: #9aa6b8; } #timer.done { color: var(--gold); }
+  #timer i { display: inline-block; width: 0.56em; text-align: center; font-style: normal; }   /* 숫자 칸 폭 고정 → 흔들림 없음 */
   #delta { display: inline-block; margin-top: 6px; font: 700 20px var(--num); padding: 1px 12px; border-radius: 4px; opacity: 0; transition: opacity .25s; }
   #delta.show { opacity: 1; } #delta.good { background: rgba(45,255,143,.18); color: var(--acc); } #delta.bad { background: rgba(255,77,94,.18); color: #ff7d8a; }
   #hint { margin-top: 8px; font-size: 15px; font-weight: 700; color: var(--gold); text-shadow: 0 2px 8px #000; }
