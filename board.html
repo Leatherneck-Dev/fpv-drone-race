@@ -207,21 +207,19 @@ const prev = {};
 const queue = []; let busy = false;
 function render(mapId, list) {
   const box = $("rows-" + mapId);
-  const old = prev[mapId], now = new Map(list.map((r, i) => [Records.teamKey(r.team), { t: r.time, i }]));
-  const changed = new Set(), rankUp = {};
-  if (old) for (const [k, v] of now) {
-    const o = old.get(k);
-    if (!o || v.t < o.t) changed.add(k);
-    if (o && v.i < o.i) rankUp[k] = o.i - v.i;
-  }
+  // 완주 1회 = 1줄 → 줄마다 고유 id로 새 기록을 구분
+  const rid = r => r.id || (Records.teamKey(r.team) + ":" + r.time);
+  const old = prev[mapId], now = new Map(list.map((r, i) => [rid(r), i]));
+  const changed = new Set();
+  if (old) for (const k of now.keys()) if (!old.has(k)) changed.add(k);
   prev[mapId] = now;
   const before = new Map([...box.children].filter(e => e.dataset.k).map(e => [e.dataset.k, e.getBoundingClientRect().top]));
   let html = "";
   for (let i = 0; i < N; i++) {
     const r = list[i], cls = `r ${i < 3 ? "podium p" + (i + 1) : ""}`;
     if (!r) { html += `<div class="${cls} empty"><span class="rk">${i + 1}</span><span class="nm">—</span><span></span><span class="tm">-:--.---</span></div>`; continue; }
-    const k = Records.teamKey(r.team), hot = changed.has(k);
-    const badge = hot ? `<span class="badge">${rankUp[k] ? "▲" + rankUp[k] : old && !old.has(k) ? "NEW" : "PB"}</span>` : "";
+    const k = rid(r), hot = changed.has(k);
+    const badge = hot ? `<span class="badge">NEW</span>` : "";
     html += `<div class="${cls} ${hot ? "hot" : ""}" data-k="${esc(k)}"><span class="rk">${i + 1}</span><span class="nm">${esc(r.team)}${badge}</span>` +
       `<span class="lv">${Records.MODE_NAME[r.mode || "angle"] || ""} ${Records.LEVEL_NAME[r.level] || ""}</span><span class="tm">${fmt(r.time)}</span></div>`;
   }
@@ -235,7 +233,7 @@ function render(mapId, list) {
   const info = Records.MAP_INFO.find(m => m.id === mapId);
   let rec = false;
   list.forEach((r, i) => {
-    if (!changed.has(Records.teamKey(r.team)) || i !== 0) return;
+    if (!changed.has(rid(r)) || i !== 0) return;
     const q = queue.findIndex(x => x.info.id === mapId);       // 같은 맵은 가장 최근 1위만 연출
     if (q >= 0) queue[q] = { r, info }; else queue.push({ r, info });
     rec = true;
