@@ -219,7 +219,7 @@ function readInput(dt) {
   let th = st[m.th], yaw = st[m.yaw], pitch = st[m.pitch], roll = st[m.roll];
   const iv = S.tune.inv;
   if (iv.throttle) th = -th; if (iv.yaw) yaw = -yaw; if (iv.pitch) pitch = -pitch; if (iv.roll) roll = -roll;
-  const k = 1 - Math.exp(-dt / 0.075);   // 조종기는 50Hz 계단식 값이라 프레임 사이를 부드럽게 이어줌
+  const k = 1 - Math.exp(-dt / 0.04);    // 조종기는 50Hz 계단식 값이라 프레임 사이를 부드럽게 이어줌 (짧게: 반응 지연 최소화)
   filt.th += (shape(th) - filt.th) * k; filt.yaw += (shape(yaw) - filt.yaw) * k;
   filt.pitch += (shape(pitch) - filt.pitch) * k; filt.roll += (shape(roll) - filt.roll) * k;
   return { th: filt.th, yaw: filt.yaw, pitch: filt.pitch, roll: filt.roll, raw: [st.Lx, st.Ly, st.Rx, st.Ry] };
@@ -310,12 +310,13 @@ function toggleArm() {
   sfx.arm(drone.armed);
 }
 function checkArmGesture(raw, dt) {
+  // 넉넉한 범위: 두 스틱이 대략 안쪽 아래 방향(대각선)으로 반 이상 밀려 있으면 인정
   const [lx, ly, rx, ry] = raw;
-  const g = ly < -0.7 && lx > 0.5 && ry < -0.7 && rx < -0.5;
-  if (!g) { ARM.hold = 0; if (ly > -0.5 || ry > -0.5) ARM.latch = false; return; }
+  const g = ly < -0.4 && lx > 0.3 && ry < -0.4 && rx < -0.3;
+  if (!g) { ARM.hold = 0; if (ly > -0.25 || ry > -0.25) ARM.latch = false; return; }
   if (ARM.latch) return;
   ARM.hold += dt;
-  if (ARM.hold > 0.35) { ARM.latch = true; ARM.hold = 0; toggleArm(); }
+  if (ARM.hold > 0.25) { ARM.latch = true; ARM.hold = 0; toggleArm(); }
 }
 const _e = new THREE.Euler(0, 0, 0, "YXZ"), _v = V3(), _q = new THREE.Quaternion(), _w = V3(), _hn = V3(), _t = V3(), _up = V3();
 function setPose(x, y, z, yaw) {
@@ -434,22 +435,25 @@ function physicsStep(dt, inp) {
   const L = LV();
   const parked = drone.grounded && (inp.th <= 0.05 || !drone.armed);
   // CoDrone EDU 같은 소형 드론 느낌: 부드럽게 기울고, 놓아도 살짝 미끄러지며, 높이는 천천히 붙었다 섬
-  const K = TK(), baseTilt = deg(L.tilt), maxTilt = clamp(baseTilt * K, deg(5), deg(50)), w0 = L.w0 * 0.85 * Math.sqrt(K);
+  const K = TK(), baseTilt = deg(L.tilt), maxTilt = clamp(baseTilt * K, deg(5), deg(50)), w0 = L.w0 * Math.sqrt(K);
   const t = race.simTime, air = !drone.grounded && drone.armed;
   if (air) {                                   // 공중에서 미세한 흔들림 (작은 드론이 공기에 밀리는 느낌)
     drone.att.p.v += (Math.sin(t * 2.3) + Math.sin(t * 5.1 + 1.7)) * 0.35 * dt;
     drone.att.r.v += (Math.sin(t * 2.9 + 0.6) + Math.sin(t * 4.3 + 2.4)) * 0.35 * dt;
   }
-  spring(drone.att.p, parked ? 0 : -inp.pitch * maxTilt, w0, 0.85, dt);
-  spring(drone.att.r, parked ? 0 : -inp.roll * maxTilt, w0, 0.85, dt);
-  drone.yawRate += ((parked ? 0 : -inp.yaw * deg(L.yaw) * K) - drone.yawRate) * (1 - Math.exp(-4 * dt));
+  spring(drone.att.p, parked ? 0 : -inp.pitch * maxTilt, w0, 0.95, dt);
+  spring(drone.att.r, parked ? 0 : -inp.roll * maxTilt, w0, 0.95, dt);
+  // 회전: 스틱을 놓으면 바로 멈춤 (밀림 없음)
+  const yawT = parked ? 0 : -inp.yaw * deg(L.yaw) * K;
+  drone.yawRate += (yawT - drone.yawRate) * (1 - Math.exp(-(Math.abs(inp.yaw) < 0.05 ? 20 : 9) * dt));
   drone.yaw += drone.yawRate * dt;
   drone.q.setFromEuler(_e.set(drone.att.p.x, drone.yaw, drone.att.r.x, "YXZ"));
   _up.set(0, 1, 0).applyQuaternion(drone.q);
-  // 기울기 → 수평 가속, 공기저항이 작아 스틱을 놓아도 1초쯤 미끄러지다 멈춤
-  const k = 1.3, drag = Math.tan(baseTilt) * G * k / L.vmax;
+  // 기울기 → 수평 가속. 스틱을 놓으면 CoDrone처럼 제자리 잡기(브레이크) → 짧게만 미끄러지고 멈춤
+  const k = 1.8, drag = Math.tan(baseTilt) * G * k / L.vmax;
   if (!parked && drone.armed) { const uy = Math.max(_up.y, 0.3); drone.vel.x += _up.x / uy * G * k * dt; drone.vel.z += _up.z / uy * G * k * dt; }
-  const f = Math.exp(-drag * dt); drone.vel.x *= f; drone.vel.z *= f;
+  const centered = Math.abs(inp.pitch) < 0.06 && Math.abs(inp.roll) < 0.06;
+  const f = Math.exp(-(drag + (centered && drone.armed ? 4.5 : 0)) * dt); drone.vel.x *= f; drone.vel.z *= f;
   if (drone.armed) {
     // 스로틀 → 상승/하강 속도. 부드럽게 따라가고, 놓으면 살짝 더 가다 그 높이에 섬 (+ 미세한 출렁임)
     let vT = inp.th * L.vz * S.tune.thr / 100;
@@ -612,14 +616,18 @@ function motorHum(on, inp) {
   if (!on) { if (hum) { hum.g.gain.setTargetAtTime(0, actx.currentTime, 0.08); } return; }
   const a = audio(); if (!a) return;
   if (!hum) {
-    const o = a.createOscillator(), o2 = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain();
-    o.type = "sawtooth"; o2.type = "square"; lp.type = "lowpass"; lp.frequency.value = 900; g.gain.value = 0;
-    o.connect(lp); o2.connect(lp); lp.connect(g).connect(a.destination); o.start(); o2.start();
+    // 소형 드론 프로펠러의 높은 "윙~" 소리: 고음 톱니파 2개(살짝 어긋나 맥놀이) + 대역 필터
+    const o = a.createOscillator(), o2 = a.createOscillator(), bp = a.createBiquadFilter(), hp = a.createBiquadFilter(), g = a.createGain();
+    o.type = "sawtooth"; o2.type = "sawtooth";
+    hp.type = "highpass"; hp.frequency.value = 350;
+    bp.type = "peaking"; bp.frequency.value = 2400; bp.gain.value = 6; bp.Q.value = 1.2;
+    g.gain.value = 0;
+    o.connect(hp); o2.connect(hp); hp.connect(bp).connect(g).connect(a.destination); o.start(); o2.start();
     hum = { o, o2, g };
   }
-  const f = 150 + Math.max(0, inp.th) * 110 + drone.vel.length() * 6 + (drone.grounded ? -30 : 0);
-  hum.o.frequency.setTargetAtTime(f, a.currentTime, 0.08); hum.o2.frequency.setTargetAtTime(f * 1.51, a.currentTime, 0.08);
-  hum.g.gain.setTargetAtTime(0.018, a.currentTime, 0.1);
+  const f = 560 + Math.max(0, inp.th) * 380 + Math.abs(inp.pitch) * 120 + Math.abs(inp.roll) * 120 + (drone.grounded ? -120 : 0);
+  hum.o.frequency.setTargetAtTime(f, a.currentTime, 0.06); hum.o2.frequency.setTargetAtTime(f * 1.012 + 3, a.currentTime, 0.06);
+  hum.g.gain.setTargetAtTime(0.012, a.currentTime, 0.1);
 }
 const sfx = {
   gate: () => { tone(1046, 0.08, "triangle", 0.09); setTimeout(() => tone(1568, 0.1, "triangle", 0.08), 55); },
