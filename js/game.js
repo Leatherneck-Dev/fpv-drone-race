@@ -174,7 +174,7 @@ const STICK_MODES = {
   3: { th: "Ry", yaw: "Rx", pitch: "Ly", roll: "Lx" },
   4: { th: "Ly", yaw: "Rx", pitch: "Ry", roll: "Lx" },
 };
-if (!STICK_MODES[S.stickMode]) S.stickMode = 2;
+S.stickMode = 2;                         // Mode 2 고정 (선택 기능 제거)
 const SM = () => STICK_MODES[S.stickMode];
 const stickName = f => (SM()[f][0] === "L" ? "왼쪽 스틱" : "오른쪽 스틱");
 // 안내 문구의 {THR} {YAW} {PITCH} {ROLL}을 현재 스틱 모드의 스틱 이름으로
@@ -262,9 +262,10 @@ function buildMap(mi, drill = 0) {
   if (padSpec) path.push([padSpec[0], padSpec[1]]);
   map.build({ path, track: activeTrack, cps, quality: S.quality });
   // 출발 패드
-  const sp = new THREE.Mesh(new THREE.CircleGeometry(0.75, 40), std(0x23272f, { roughness: 0.6 }));
+  // 출발 패드는 드론 바로 아래에만 작게 (카메라가 낮아 크면 화면을 가림)
+  const sp = new THREE.Mesh(new THREE.CircleGeometry(0.32, 32), std(0x23272f, { roughness: 0.6 }));
   sp.rotation.x = -Math.PI / 2; sp.position.set(map.start[0], 0.025, map.start[1]); world.add(sp);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 40), basic(0x2dff8f));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.26, 0.3, 32), basic(0x2dff8f));
   ring.rotation.x = -Math.PI / 2; ring.position.set(map.start[0], 0.03, map.start[1]); world.add(ring);
   // 착륙장 (정밀 착륙 연습)
   finishPad = null;
@@ -298,8 +299,24 @@ const G = 9.81, R = 0.18;
 const drone = {
   pos: V3(), prev: V3(), vel: V3(), q: new THREE.Quaternion(),
   yaw: 0, yawRate: 0, att: { p: { x: 0, v: 0 }, r: { x: 0, v: 0 } }, ang: V3(),
-  grounded: true, tumble: 0, shake: 0,
+  grounded: true, tumble: 0, shake: 0, armed: false,
 };
+// ---------- 시동: 양쪽 스틱을 안쪽 아래로 모으면(↘ ↙) 시동 걸기/끄기 — 땅에 있을 때만 ----------
+const ARM = { hold: 0, latch: false };
+function toggleArm() {
+  if (!drone.grounded || drone.tumble > 0) return;
+  drone.armed = !drone.armed;
+  banner(drone.armed ? "시동됨" : "시동 꺼짐", drone.armed ? "#2dff8f" : "#ffc53a", 1000);
+  sfx.arm(drone.armed);
+}
+function checkArmGesture(raw, dt) {
+  const [lx, ly, rx, ry] = raw;
+  const g = ly < -0.7 && lx > 0.5 && ry < -0.7 && rx < -0.5;
+  if (!g) { ARM.hold = 0; if (ly > -0.5 || ry > -0.5) ARM.latch = false; return; }
+  if (ARM.latch) return;
+  ARM.hold += dt;
+  if (ARM.hold > 0.35) { ARM.latch = true; ARM.hold = 0; toggleArm(); }
+}
 const _e = new THREE.Euler(0, 0, 0, "YXZ"), _v = V3(), _q = new THREE.Quaternion(), _w = V3(), _hn = V3(), _t = V3(), _up = V3();
 function setPose(x, y, z, yaw) {
   drone.pos.set(x, y, z); drone.prev.copy(drone.pos); drone.vel.set(0, 0, 0);
@@ -388,7 +405,7 @@ function tumbleStep(dt) {
 const _lv = V3();
 function rateStep(dt, inp) {
   const RT = RATE[S.level], maxRate = deg(RT.rate) * TK();
-  const parked = drone.grounded && inp.th <= 0.05;
+  const parked = drone.grounded && (inp.th <= 0.05 || !drone.armed);
   _w.set(-inp.pitch * maxRate, -inp.yaw * maxRate * 0.6, -inp.roll * maxRate);
   if (S.mode === "horizon") {
     // 스틱 가운데 근처: 자동 수평(앵글처럼) / 끝까지: 아크로처럼 계속 회전
@@ -402,7 +419,8 @@ function rateStep(dt, inp) {
   const a = drone.ang.length();
   if (a > 1e-5) { _q.setFromAxisAngle(_v.copy(drone.ang).divideScalar(a), a * dt); drone.q.multiply(_q).normalize(); }
   const tg = S.tune.thr / 100;
-  drone.thrust += (1 + inp.th * (inp.th > 0 ? RT.thr * tg : 0.95 * Math.min(1, tg)) - drone.thrust) * (1 - Math.exp(-12 * dt));
+  const thrTarget = drone.armed ? 1 + inp.th * (inp.th > 0 ? RT.thr * tg : 0.95 * Math.min(1, tg)) : 0;   // 시동 꺼짐 = 추력 0
+  drone.thrust += (thrTarget - drone.thrust) * (1 - Math.exp(-12 * dt));
   _up.set(0, 1, 0).applyQuaternion(drone.q);
   if (!parked) drone.vel.addScaledVector(_up, drone.thrust * G * dt);
   drone.vel.y -= parked ? 0 : G * dt;
@@ -414,19 +432,31 @@ function physicsStep(dt, inp) {
   if (drone.tumble > 0) return tumbleStep(dt);
   if (S.mode !== "angle") { rateStep(dt, inp); return physicsCommon(dt, inp); }
   const L = LV();
-  const parked = drone.grounded && inp.th <= 0.05;
-  const K = TK(), baseTilt = deg(L.tilt), maxTilt = clamp(baseTilt * K, deg(5), deg(50)), w0 = L.w0 * Math.sqrt(K);
-  spring(drone.att.p, parked ? 0 : -inp.pitch * maxTilt, w0, 0.9, dt);
-  spring(drone.att.r, parked ? 0 : -inp.roll * maxTilt, w0, 0.9, dt);
-  drone.yawRate += ((parked ? 0 : -inp.yaw * deg(L.yaw) * K) - drone.yawRate) * (1 - Math.exp(-6 * dt));
+  const parked = drone.grounded && (inp.th <= 0.05 || !drone.armed);
+  // CoDrone EDU 같은 소형 드론 느낌: 부드럽게 기울고, 놓아도 살짝 미끄러지며, 높이는 천천히 붙었다 섬
+  const K = TK(), baseTilt = deg(L.tilt), maxTilt = clamp(baseTilt * K, deg(5), deg(50)), w0 = L.w0 * 0.85 * Math.sqrt(K);
+  const t = race.simTime, air = !drone.grounded && drone.armed;
+  if (air) {                                   // 공중에서 미세한 흔들림 (작은 드론이 공기에 밀리는 느낌)
+    drone.att.p.v += (Math.sin(t * 2.3) + Math.sin(t * 5.1 + 1.7)) * 0.35 * dt;
+    drone.att.r.v += (Math.sin(t * 2.9 + 0.6) + Math.sin(t * 4.3 + 2.4)) * 0.35 * dt;
+  }
+  spring(drone.att.p, parked ? 0 : -inp.pitch * maxTilt, w0, 0.85, dt);
+  spring(drone.att.r, parked ? 0 : -inp.roll * maxTilt, w0, 0.85, dt);
+  drone.yawRate += ((parked ? 0 : -inp.yaw * deg(L.yaw) * K) - drone.yawRate) * (1 - Math.exp(-4 * dt));
   drone.yaw += drone.yawRate * dt;
   drone.q.setFromEuler(_e.set(drone.att.p.x, drone.yaw, drone.att.r.x, "YXZ"));
   _up.set(0, 1, 0).applyQuaternion(drone.q);
-  // 기울기 → 수평 가속 (최고속도에서 공기저항과 균형), 스로틀 → 상승/하강 속도
-  const k = 2.0, drag = Math.tan(baseTilt) * G * k / L.vmax;       // 감도를 올리면 더 기울고 더 빨라짐
-  if (!parked) { const uy = Math.max(_up.y, 0.3); drone.vel.x += _up.x / uy * G * k * dt; drone.vel.z += _up.z / uy * G * k * dt; }
+  // 기울기 → 수평 가속, 공기저항이 작아 스틱을 놓아도 1초쯤 미끄러지다 멈춤
+  const k = 1.3, drag = Math.tan(baseTilt) * G * k / L.vmax;
+  if (!parked && drone.armed) { const uy = Math.max(_up.y, 0.3); drone.vel.x += _up.x / uy * G * k * dt; drone.vel.z += _up.z / uy * G * k * dt; }
   const f = Math.exp(-drag * dt); drone.vel.x *= f; drone.vel.z *= f;
-  drone.vel.y += (inp.th * L.vz * S.tune.thr / 100 - drone.vel.y) * (1 - Math.exp(-3.5 * dt));
+  if (drone.armed) {
+    // 스로틀 → 상승/하강 속도. 부드럽게 따라가고, 놓으면 살짝 더 가다 그 높이에 섬 (+ 미세한 출렁임)
+    let vT = inp.th * L.vz * S.tune.thr / 100;
+    if (air) vT += Math.sin(t * 1.7) * 0.06 + Math.sin(t * 3.9 + 1) * 0.04;
+    drone.vel.y += (vT - drone.vel.y) * (1 - Math.exp(-2.6 * dt));
+    if (drone.pos.y < R + 0.5 && drone.vel.y < -1.2) drone.vel.y += (-1.2 - drone.vel.y) * (1 - Math.exp(-6 * dt));   // 바닥 근처 공기 쿠션
+  } else if (!drone.grounded) drone.vel.y -= G * dt;   // 시동 꺼지면 추락
   physicsCommon(dt, inp);
 }
 // 모든 모드 공통: 이동 → 장애물 충돌 → 바닥 → 맵 경계 → 게이트 통과
@@ -523,7 +553,7 @@ function respawn(toStart) {
   } else {
     const g = activeTrack[0].p;
     setPose(map.start[0], R, map.start[1], headingTo(map.start[0], map.start[1], g[0], g[2]));
-    drone.grounded = true;
+    drone.grounded = true; drone.armed = false;           // 출발점으로 돌아오면 시동 꺼진 상태
     if (toStart || race.state !== "running") { race.state = "ready"; race.next = 0; }
   }
 }
@@ -576,6 +606,21 @@ function tone(freq, dur, type = "square", vol = 0.06, slide = 0) {
     o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
   } catch (e) {}
 }
+// 시동 중 모터 소리 (스로틀·속도에 따라 높낮이 변화)
+let hum = null;
+function motorHum(on, inp) {
+  if (!on) { if (hum) { hum.g.gain.setTargetAtTime(0, actx.currentTime, 0.08); } return; }
+  const a = audio(); if (!a) return;
+  if (!hum) {
+    const o = a.createOscillator(), o2 = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain();
+    o.type = "sawtooth"; o2.type = "square"; lp.type = "lowpass"; lp.frequency.value = 900; g.gain.value = 0;
+    o.connect(lp); o2.connect(lp); lp.connect(g).connect(a.destination); o.start(); o2.start();
+    hum = { o, o2, g };
+  }
+  const f = 150 + Math.max(0, inp.th) * 110 + drone.vel.length() * 6 + (drone.grounded ? -30 : 0);
+  hum.o.frequency.setTargetAtTime(f, a.currentTime, 0.08); hum.o2.frequency.setTargetAtTime(f * 1.51, a.currentTime, 0.08);
+  hum.g.gain.setTargetAtTime(0.018, a.currentTime, 0.1);
+}
 const sfx = {
   gate: () => { tone(1046, 0.08, "triangle", 0.09); setTimeout(() => tone(1568, 0.1, "triangle", 0.08), 55); },
   thud: k => {                           // 쿠·쿠·쿵
@@ -586,6 +631,8 @@ const sfx = {
   },
   crash: () => { thump(0.02, 0.7, 320); crunch(0.25); tone(180, 0.6, "sawtooth", 0.05, -140); },
   finish: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.2, "triangle", 0.1), i * 110)),
+  arm: on => on ? [440, 660, 880].forEach((f, i) => setTimeout(() => tone(f, 0.12, "triangle", 0.08), i * 90))
+                : [660, 440].forEach((f, i) => setTimeout(() => tone(f, 0.14, "triangle", 0.07), i * 110)),
 };
 
 // ---------- HUD ----------
@@ -719,7 +766,10 @@ function updateHUD(now, inp) {
   const tm = $("timer"), ts = fmt(t);
   if (tm.dataset.t !== ts) { tm.dataset.t = ts; tm.innerHTML = ts.replace(/\d/g, d => `<i>${d}</i>`); }
   tm.className = race.state === "running" ? "" : race.state === "done" ? "done" : "idle";
-  $("hint").textContent = race.state === "ready" ? "초록색 1번 게이트를 통과하면 타이머 시작!"
+  const st = $("armState");
+  st.textContent = drone.armed ? "● 시동됨" : "● 시동 꺼짐"; st.className = drone.armed ? "on" : "";
+  $("hint").textContent = !drone.armed && drone.grounded ? "양쪽 스틱을 안쪽 아래로 모아 시동을 거세요 ↘ ↙  (키보드: Space)"
+    : race.state === "ready" ? "초록색 1번 게이트를 통과하면 타이머 시작!"
     : race.state === "running" && race.next >= cps.length && finishPad ? "H 착륙장에 착륙하세요!" : "";
   const passed = race.state === "running" ? race.next : 0, total = cps.length + (finishPad ? 1 : 0);
   $("gateNum").innerHTML = `${Math.min(passed + (race.state === "running" ? 1 : 0), total)}<small>/${total}</small>`;
@@ -787,24 +837,16 @@ function renderSpeed() {
   }).join("");
   $("speedSeg").querySelectorAll("button").forEach(b => b.onclick = () => { S.level = +b.dataset.l; saveSettings(); loadBestSplits(); renderSpeed(); });
 }
-// 스틱 모드 선택 + 왼쪽/오른쪽 스틱 역할 안내
+// 왼쪽/오른쪽 스틱 역할 안내 (Mode 2) + 시동 방법
 const FN_KO = { th: "↑↓ 상승 / 하강", yaw: "←→ 왼쪽 / 오른쪽 회전", pitch: "↑↓ 전진 / 후진", roll: "←→ 왼쪽 / 오른쪽 이동" };
 const FN_EN = { th: "THR", yaw: "YAW", pitch: "PIT", roll: "ROLL" };
 const fnOf = axis => Object.keys(SM()).find(f => SM()[f] === axis);
 function renderStickModes() {
-  $("stickSeg").innerHTML = [1, 2, 3, 4].map(n => {
-    const m = STICK_MODES[n], f = axis => Object.keys(m).find(k => m[k] === axis);
-    return `<button data-n="${n}" class="${n === S.stickMode ? "sel" : ""}"><div class="t1">MODE ${n}${n === 2 ? " ★" : ""}</div>` +
-      `<div class="t2">왼쪽 ${FN_EN[f("Ly")]}·${FN_EN[f("Lx")]}</div></button>`;
-  }).join("");
   $("stickDesc").innerHTML = ["L", "R"].map(sd =>
-    `<div><b>${sd === "L" ? "LEFT STICK · 왼쪽" : "RIGHT STICK · 오른쪽"}</b>${FN_KO[fnOf(sd + "y")]}<br>${FN_KO[fnOf(sd + "x")]}</div>`).join("");
+    `<div><b>${sd === "L" ? "LEFT STICK · 왼쪽" : "RIGHT STICK · 오른쪽"}</b>${FN_KO[fnOf(sd + "y")]}<br>${FN_KO[fnOf(sd + "x")]}</div>`).join("") +
+    `<div class="arm"><b>시동 걸기 / 끄기</b>양쪽 스틱을 <u>안쪽 아래</u>로 모으기 ↘ ↙ <span>(키보드: Space)</span></div>`;
   document.querySelector("#stickL span").textContent = `${FN_EN[fnOf("Ly")]} · ${FN_EN[fnOf("Lx")]}`;
   document.querySelector("#stickR span").textContent = `${FN_EN[fnOf("Ry")]} · ${FN_EN[fnOf("Rx")]}`;
-  $("stickSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
-    S.stickMode = +b.dataset.n; saveSettings(); renderStickModes();
-    if (map && map.drills) buildMap(0, S.drill);       // 연습 맵 힌트 문구 갱신
-  });
 }
 function renderModes() {
   $("modeSeg").innerHTML = Object.entries(MODES).map(([k, m]) => {
@@ -872,6 +914,7 @@ addEventListener("keydown", e => {
   if (e.code === "Enter" && inMenu) play();
   if (e.code === "KeyM" || e.code === "Escape") toggleMenu();
   if (!inMenu && e.code === "KeyR") { respawn(true); $("result").classList.add("hidden"); }
+  if (!inMenu && e.code === "Space" && !e.repeat) toggleArm();
   if (!inMenu && map.drills && /^Digit[1-6]$/.test(e.code)) selectDrill(+e.code.slice(5) - 1);
   if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
 });
@@ -885,7 +928,10 @@ function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; T += dt;
   const inp = readInput(dt);
   const inMenu = !$("menu").classList.contains("hidden");
+  if (inMenu) motorHum(false);
   if (!inMenu) {
+    checkArmGesture(inp.raw, dt);
+    motorHum(drone.armed && drone.tumble <= 0, inp);
     acc += dt;
     while (acc >= STEP) { physicsStep(STEP, inp); race.simTime += STEP; acc -= STEP; }
   }
