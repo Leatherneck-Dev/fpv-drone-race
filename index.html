@@ -151,7 +151,9 @@
     clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); box-shadow: 0 0 30px rgba(45,255,143,.35); transition: filter .15s; }
   .play:hover { filter: brightness(1.12); } .play .ko { font: 900 18px "Noto Sans KR"; letter-spacing: 1px; margin-right: 10px; }
   .play kbd { color: #04150c; border-color: rgba(0,0,0,.35); background: rgba(0,0,0,.1); vertical-align: middle; }
-  @media (max-height: 1000px) { .howto { display: none !important; } }
+  .speed.sm4 { grid-template-columns: repeat(4, 1fr); gap: 6px; } .speed.sm4 .t1 { font-size: 15px; } .speed.sm4 .t2 { font-size: 11px; }
+  .howto { margin-top: 8px; }
+  .howto div { padding: 7px 10px !important; font-size: 12px !important; line-height: 1.6 !important; }
   .howto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .howto div { background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.75; color: #cdd6e2; }
   .howto b { display: block; font: 700 12px var(--num); letter-spacing: 2px; color: var(--acc2); margin-bottom: 2px; }
@@ -219,6 +221,7 @@
     <div class="field"><label>TEAM · 팀 이름</label><input id="team" maxlength="16" placeholder="예: 3조 B팀" autocomplete="off"></div>
     <div class="field"><label>FLIGHT MODE · 비행 모드</label><div class="speed" id="modeSeg"></div><div class="mdesc" id="modeDesc"></div></div>
     <div class="field"><label>SPEED · 최고 속도</label><div class="speed" id="speedSeg"></div></div>
+    <div class="field"><label>STICK MODE · 스틱 모드</label><div class="speed sm4" id="stickSeg"></div><div class="howto" id="stickDesc"></div></div>
     <div class="field"><label>CONTROLLER · 조종기</label>
       <div class="ctrl" id="ctrlBox"><span class="dot"></span><span id="connStatus">연결 안 됨 · 키보드로 조종</span><button id="btnConnect">연결</button><button id="btnCalib" title="스틱에서 손을 떼고 누르세요">보정</button></div>
     </div>
@@ -238,10 +241,6 @@
       <div class="trow"><span class="thint">아크로가 어려우면 감도를 50~70%, 엑스포를 50% 이상으로 낮춰 보세요.</span></div>
     </details>
     <button class="play" id="btnPlay"><span class="ko">비행 시작</span>START <kbd>Enter</kbd></button>
-    <div class="howto">
-      <div><b>LEFT STICK</b>↑↓ 상승 / 하강<br>←→ 왼쪽 / 오른쪽 회전</div>
-      <div><b>RIGHT STICK</b>↑↓ 전진 / 후진<br>←→ 왼쪽 / 오른쪽 이동</div>
-    </div>
   </section>
   <section class="m-maps" id="mapCards"></section>
 </div>
