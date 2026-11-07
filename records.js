@@ -44,7 +44,8 @@
     let season = 0, seasonReady;
     const seasonLoaded = new Promise(r => { seasonReady = r; });
     const sfx = () => (season ? "_s" + season : "");
-    const best = m => roomDoc.collection("best_" + m + sfx());
+    const best = m => roomDoc.collection("best_" + m + sfx());      // 팀별 최고기록 (결과 화면의 "팀 최고" 비교용)
+    const runs = m => roomDoc.collection("runs_" + m + sfx());      // 완주 1회 = 1줄 (순위표는 이걸로)
     const feed = () => roomDoc.collection("feed" + sfx());
     const subs = new Set();
     meta.onSnapshot(d => {
@@ -70,14 +71,14 @@
           improved = prev === null || e.time < prev;
           if (improved) tx.set(ref, Object.assign({}, e, { at: ts() }));
         });
+        await runs(e.map).add(Object.assign({}, e, { at: ts() }));
         feed().add(Object.assign({}, e, { improved, at: ts() })).catch(err => console.warn(err));
-        const myBest = improved ? e.time : prev;
-        const faster = await best(e.map).where("time", "<", myBest).get();
+        const faster = await runs(e.map).where("time", "<", e.time).get();
         return { improved, prev, rank: faster.size + 1 };
       },
       subscribeTop(map, n, cb) {
-        return sub(() => best(map).orderBy("time").limit(n)
-          .onSnapshot(s => cb(s.docs.map(d => d.data())), err => console.warn("top", err)));
+        return sub(() => runs(map).orderBy("time").limit(n)
+          .onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), err => console.warn("top", err)));
       },
       subscribeFeed(n, cb) {
         return sub(() => feed().orderBy("at", "desc").limit(n)
@@ -96,7 +97,7 @@
     const bc = "BroadcastChannel" in window ? new BroadcastChannel("fpvsim-" + room) : null;
     if (bc) bc.onmessage = notify;
     addEventListener("storage", e => { if (e.key && e.key.startsWith(K(""))) notify(); });
-    const topOf = (map, n) => Object.values(read("best_" + map) || {}).sort((a, b) => a.time - b.time).slice(0, n);
+    const topOf = (map, n) => (read("runs_" + map) || []).slice().sort((a, b) => a.time - b.time).slice(0, n);
     return {
       kind: "local",
       async submit(e) {
@@ -105,17 +106,19 @@
         const improved = prev === null || e.time < prev;
         if (improved) all[key] = Object.assign({}, e, { at: Date.now() });
         write("best_" + e.map, all);
+        const rs = read("runs_" + e.map) || [];
+        rs.push(Object.assign({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 7) }, e, { at: Date.now() }));
+        write("runs_" + e.map, rs.sort((a, b) => a.time - b.time).slice(0, 200));
         const f = read("feed") || [];
         f.unshift(Object.assign({}, e, { improved, at: Date.now() }));
         write("feed", f.slice(0, 50));
         notify(); if (bc) bc.postMessage(1);
-        const myBest = improved ? e.time : prev;
-        return { improved, prev, rank: Object.values(all).filter(r => r.time < myBest).length + 1 };
+        return { improved, prev, rank: rs.filter(r => r.time < e.time).length + 1 };
       },
       subscribeTop(map, n, cb) { const f = () => cb(topOf(map, n)); listeners.add(f); f(); return () => listeners.delete(f); },
       subscribeFeed(n, cb) { const f = () => cb((read("feed") || []).slice(0, n)); listeners.add(f); f(); return () => listeners.delete(f); },
       clear() {
-        MAP_INFO.forEach(m => write("best_" + m.id, {})); write("feed", []);
+        MAP_INFO.forEach(m => { write("best_" + m.id, {}); write("runs_" + m.id, []); }); write("feed", []);
         notify(); if (bc) bc.postMessage(1);
       },
     };
