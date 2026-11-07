@@ -59,6 +59,10 @@
   #osd .v { font: 700 28px/1 var(--num); font-variant-numeric: tabular-nums; } #osd .u { font: 600 12px var(--num); color: var(--muted); margin-left: 3px; }
   #osd .lv { font: 700 13px var(--num); letter-spacing: 1px; color: #071018; background: var(--acc2); padding: 3px 8px; border-radius: 3px; align-self: center; }
 
+  #armState { align-self: center; font-weight: 900; font-size: 14px; color: #ff6b78; white-space: nowrap; }
+  #armState.on { color: var(--acc); text-shadow: 0 0 10px rgba(45,255,143,.6); }
+  .howto .arm { grid-column: 1 / -1; border-color: rgba(255,197,58,.4) !important; background: rgba(255,197,58,.08) !important; }
+  .howto .arm b { color: var(--gold) !important; } .howto .arm span { color: var(--muted); font-size: 11.5px; }
   #keys { position: absolute; bottom: 18px; left: 16px; padding: 10px; font-size: 12.5px; pointer-events: auto; border-radius: 10px; }
   #keys .kb { display: flex; gap: 6px; }
   #keys button { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: #fff; padding: 9px 14px;
@@ -103,8 +107,9 @@
   #result .foot { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
 
   /* ================= MENU ================= */
-  #menu { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-columns: minmax(330px, 420px) 1fr; grid-template-rows: auto 1fr auto;
-    background: linear-gradient(90deg, rgba(5,8,14,.94) 0%, rgba(5,8,14,.78) 32%, rgba(5,8,14,.15) 62%, rgba(5,8,14,.35) 100%),
+  /* 왼쪽: 팀·비행모드·속도 / 가운데: 배경 맵 / 오른쪽: 조종기·조종법·설정·시작 / 아래: 맵 선택 */
+  #menu { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-columns: minmax(320px, 400px) 1fr minmax(320px, 400px); grid-template-rows: auto 1fr auto;
+    background: linear-gradient(90deg, rgba(5,8,14,.92) 0%, rgba(5,8,14,.7) 26%, rgba(5,8,14,.1) 45%, rgba(5,8,14,.1) 55%, rgba(5,8,14,.7) 74%, rgba(5,8,14,.92) 100%),
                 linear-gradient(0deg, rgba(5,8,14,.9) 0%, rgba(5,8,14,0) 34%); overflow-y: auto; }
   .m-top { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 22px 34px 0; }
   .brand { display: flex; align-items: baseline; gap: 10px; }
@@ -113,7 +118,9 @@
   .brand .ko { font-size: 13px; color: var(--muted); letter-spacing: 1px; margin-left: 6px; }
   .m-meta { font-size: 13px; color: var(--muted); text-align: right; line-height: 1.7; }
   .m-meta b { color: #fff; font-family: var(--num); font-size: 15px; } .m-meta a { color: var(--acc2); text-decoration: none; font-weight: 700; }
-  .m-left { padding: 2.4vh 34px; display: flex; flex-direction: column; gap: 2vh; }
+  .m-left, .m-right { padding: 2vh 30px; display: flex; flex-direction: column; gap: 1.8vh; }
+  .m-left { grid-column: 1; } .m-right { grid-column: 3; }
+  .m-right .play { margin-top: auto; }
   .field label { display: block; font: 700 12px var(--num); letter-spacing: 3px; color: var(--muted); margin-bottom: 8px; }
   #team { width: 100%; font: 900 24px "Noto Sans KR", sans-serif; color: #fff; background: rgba(255,255,255,.05); border: 1px solid var(--edge);
     border-bottom: 2px solid var(--acc); padding: 12px 14px; outline: none; border-radius: 4px; }
@@ -158,7 +165,7 @@
   .howto div { background: rgba(255,255,255,.04); border: 1px solid var(--edge); border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.75; color: #cdd6e2; }
   .howto b { display: block; font: 700 12px var(--num); letter-spacing: 2px; color: var(--acc2); margin-bottom: 2px; }
   .m-maps { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 0 34px 28px; align-self: end; }
-  @media (max-width: 1000px) { #menu { grid-template-columns: 1fr; } .m-maps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1000px) { #menu { grid-template-columns: 1fr; } .m-left, .m-right { grid-column: 1; } .m-maps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .mapcard { position: relative; text-align: left; border: 1px solid var(--edge); padding: 0; overflow: hidden; border-radius: 8px; background: #0b1018;
     transition: transform .2s, border-color .2s, box-shadow .2s; }
   .mapcard:hover { transform: translateY(-3px); }
@@ -201,6 +208,7 @@
     <div><span class="v" id="spd">0</span><span class="u">KM/H</span></div>
     <div><span class="v" id="alt">0.0</span><span class="u">M</span></div>
     <div class="lv" id="lvl">2단</div>
+    <div id="armState">● 시동 꺼짐</div>
   </div>
   <div id="keys" class="glass"></div>
   <div id="sticks" class="glass">
@@ -221,10 +229,12 @@
     <div class="field"><label>TEAM · 팀 이름</label><input id="team" maxlength="16" placeholder="예: 3조 B팀" autocomplete="off"></div>
     <div class="field"><label>FLIGHT MODE · 비행 모드</label><div class="speed" id="modeSeg"></div><div class="mdesc" id="modeDesc"></div></div>
     <div class="field"><label>SPEED · 최고 속도</label><div class="speed" id="speedSeg"></div></div>
-    <div class="field"><label>STICK MODE · 스틱 모드</label><div class="speed sm4" id="stickSeg"></div><div class="howto" id="stickDesc"></div></div>
+  </section>
+  <section class="m-right">
     <div class="field"><label>CONTROLLER · 조종기</label>
       <div class="ctrl" id="ctrlBox"><span class="dot"></span><span id="connStatus">연결 안 됨 · 키보드로 조종</span><button id="btnConnect">연결</button><button id="btnCalib" title="스틱에서 손을 떼고 누르세요">보정</button></div>
     </div>
+    <div class="field"><label>HOW TO FLY · 조종 방법 (Mode 2)</label><div class="howto" id="stickDesc"></div></div>
     <details class="tune" id="tuneBox">
       <summary>조종 설정 · 감도 · 카메라 각도</summary>
       <button class="treset" id="tReset">↺ 기본값으로 되돌리기</button>
