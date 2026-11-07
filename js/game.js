@@ -167,9 +167,22 @@ function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringif
 const LV = () => LEVELS[S.level];
 const teamName = () => S.team.trim();
 
+// ---------- 스틱 모드: 왼쪽(L)·오른쪽(R) 스틱의 가로(x)·세로(y)가 어떤 조종을 맡는지 ----------
+const STICK_MODES = {
+  1: { th: "Ry", yaw: "Lx", pitch: "Ly", roll: "Rx" },
+  2: { th: "Ly", yaw: "Lx", pitch: "Ry", roll: "Rx" },   // 한국·CoDrone 기본
+  3: { th: "Ry", yaw: "Rx", pitch: "Ly", roll: "Lx" },
+  4: { th: "Ly", yaw: "Rx", pitch: "Ry", roll: "Lx" },
+};
+if (!STICK_MODES[S.stickMode]) S.stickMode = 2;
+const SM = () => STICK_MODES[S.stickMode];
+const stickName = f => (SM()[f][0] === "L" ? "왼쪽 스틱" : "오른쪽 스틱");
+// 안내 문구의 {THR} {YAW} {PITCH} {ROLL}을 현재 스틱 모드의 스틱 이름으로
+const stickText = s => s.replace(/\{(THR|YAW|PITCH|ROLL)\}/g, (_, k) => stickName({ THR: "th", YAW: "yaw", PITCH: "pitch", ROLL: "roll" }[k]));
+
 // ---------- 입력: 조종기 > 게임패드 > 키보드 (저역통과 필터로 부드럽게) ----------
 const keys = {};
-const kb = { th: 0, yaw: 0, pitch: 0, roll: 0 }, filt = { th: 0, yaw: 0, pitch: 0, roll: 0 };
+const kb = { Lx: 0, Ly: 0, Rx: 0, Ry: 0 }, filt = { th: 0, yaw: 0, pitch: 0, roll: 0 };
 const approach = (v, t, s) => v + clamp(t - v, -s, s);
 function shape(v) {
   v = clamp(v, -1, 1);
@@ -181,31 +194,35 @@ function shape(v) {
 }
 let inputSource = "키보드";
 function readInput(dt) {
-  let th, yaw, pitch, roll;
+  // 1) 실제 스틱 위치 (왼쪽 Lx·Ly, 오른쪽 Rx·Ry, 위·오른쪽이 +)
+  const st = { Lx: 0, Ly: 0, Rx: 0, Ry: 0 };
   const live = ctrl.connected && performance.now() - ctrl.lastJoy < 400;
   const gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected);
   if (live) {
     inputSource = "조종기";
-    th = (ctrl.ly - S.center.ly) / 100; yaw = (ctrl.lx - S.center.lx) / 100;
-    pitch = (ctrl.ry - S.center.ry) / 100; roll = (ctrl.rx - S.center.rx) / 100;
+    st.Lx = (ctrl.lx - S.center.lx) / 100; st.Ly = (ctrl.ly - S.center.ly) / 100;
+    st.Rx = (ctrl.rx - S.center.rx) / 100; st.Ry = (ctrl.ry - S.center.ry) / 100;
   } else if (gp) {
     inputSource = "게임패드";
-    th = -gp.axes[1]; yaw = gp.axes[0]; pitch = -(gp.axes[3] || 0); roll = gp.axes[2] || 0;
+    st.Lx = gp.axes[0]; st.Ly = -gp.axes[1]; st.Rx = gp.axes[2] || 0; st.Ry = -(gp.axes[3] || 0);
   } else {
-    inputSource = "키보드";
+    inputSource = "키보드";             // W·S·A·D = 왼쪽 스틱, 방향키 = 오른쪽 스틱
     const s = dt * 3;
-    kb.th = approach(kb.th, (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), s);
-    kb.yaw = approach(kb.yaw, (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), s * 1.5);
-    kb.pitch = approach(kb.pitch, (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0), s);
-    kb.roll = approach(kb.roll, (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0), s);
-    th = kb.th; yaw = kb.yaw; pitch = kb.pitch; roll = kb.roll;
+    kb.Ly = approach(kb.Ly, (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), s);
+    kb.Lx = approach(kb.Lx, (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), s * 1.5);
+    kb.Ry = approach(kb.Ry, (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0), s);
+    kb.Rx = approach(kb.Rx, (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0), s * 1.5);
+    Object.assign(st, kb);
   }
+  // 2) 스틱 모드에 따라 조종 역할로
+  const m = SM();
+  let th = st[m.th], yaw = st[m.yaw], pitch = st[m.pitch], roll = st[m.roll];
   const iv = S.tune.inv;
   if (iv.throttle) th = -th; if (iv.yaw) yaw = -yaw; if (iv.pitch) pitch = -pitch; if (iv.roll) roll = -roll;
   const k = 1 - Math.exp(-dt / 0.075);   // 조종기는 50Hz 계단식 값이라 프레임 사이를 부드럽게 이어줌
   filt.th += (shape(th) - filt.th) * k; filt.yaw += (shape(yaw) - filt.yaw) * k;
   filt.pitch += (shape(pitch) - filt.pitch) * k; filt.roll += (shape(roll) - filt.roll) * k;
-  return { th: filt.th, yaw: filt.yaw, pitch: filt.pitch, roll: filt.roll, raw: [yaw, th, roll, pitch] };
+  return { th: filt.th, yaw: filt.yaw, pitch: filt.pitch, roll: filt.roll, raw: [st.Lx, st.Ly, st.Rx, st.Ry] };
 }
 
 // ---------- 맵 만들기 ----------
@@ -237,7 +254,7 @@ function buildMap(mi, drill = 0) {
   const dirs = trackDirs(map.start, activeTrack, padSpec);
   cps = activeTrack.map((spec, i) => makeCheckpoint(spec, dirs[i], i, activeTrack.length, env));
   if (drillInfo) cps.forEach((cp, i) => {
-    const tip = drillInfo.tips[i]; if (!tip) return;
+    const tip = drillInfo.tips[i] && stickText(drillInfo.tips[i]); if (!tip) return;
     const t = textSprite(tip, { size: 48, scale: 0.5, bg: "rgba(10,20,40,0.72)", color: "#ffe27a", weight: 700 });
     t.position.copy(cp.center).add(V3(0, (activeTrack[i].s || 3) / 2 + 1.45, 0)); world.add(t);
   });
@@ -619,7 +636,7 @@ function renderDrillBar() {
   bar.classList.remove("hidden");
   bar.innerHTML = map.drills.map((d, i) => {
     const st = starsOf(i);
-    return `<button data-i="${i}" class="${i === S.drill ? "sel" : ""}" title="${d.desc}"><span class="n">${i + 1}</span><span class="ic">${d.icon}</span>` +
+    return `<button data-i="${i}" class="${i === S.drill ? "sel" : ""}" title="${stickText(d.desc)}"><span class="n">${i + 1}</span><span class="ic">${d.icon}</span>` +
       `<span class="txt"><div class="nm">${d.name}</div><div class="st">${"★".repeat(st)}${"☆".repeat(3 - st)}</div></span></button>`;
   }).join("");
   bar.querySelectorAll("button").forEach(b => b.onclick = () => selectDrill(+b.dataset.i));
@@ -715,7 +732,7 @@ function updateHUD(now, inp) {
   if (drillInfo) {
     const st = starsOf(S.drill);
     $("recBox").innerHTML = `<div class="cap">PRACTICE</div><div class="row"><span>${drillInfo.icon} ${drillInfo.name}</span><span class="stars">${"★".repeat(st)}${"☆".repeat(3 - st)}</span></div>` +
-      `<div class="row"><span style="color:var(--muted);font-size:12px">${drillInfo.desc}</span></div>` +
+      `<div class="row"><span style="color:var(--muted);font-size:12px">${stickText(drillInfo.desc)}</span></div>` +
       (bestSplits ? `<div class="row"><span>우리 팀 최고</span><b class="gold">${fmt(bestSplits[bestSplits.length - 1])}</b></div>` : "");
   } else {
     const list = tops[map.id] || [], me = Records.teamKey(teamName()), mine = list.find(r => Records.teamKey(r.team) === me);
@@ -769,6 +786,25 @@ function renderSpeed() {
       `<div class="t1">${L.name}</div><div class="t2">${L.label} · ${S.mode === "angle" ? Math.round(L.vmax * 3.6) + "km/h" : "회전 " + RATE[l].rate + "°/s"}</div></button>`;
   }).join("");
   $("speedSeg").querySelectorAll("button").forEach(b => b.onclick = () => { S.level = +b.dataset.l; saveSettings(); loadBestSplits(); renderSpeed(); });
+}
+// 스틱 모드 선택 + 왼쪽/오른쪽 스틱 역할 안내
+const FN_KO = { th: "↑↓ 상승 / 하강", yaw: "←→ 왼쪽 / 오른쪽 회전", pitch: "↑↓ 전진 / 후진", roll: "←→ 왼쪽 / 오른쪽 이동" };
+const FN_EN = { th: "THR", yaw: "YAW", pitch: "PIT", roll: "ROLL" };
+const fnOf = axis => Object.keys(SM()).find(f => SM()[f] === axis);
+function renderStickModes() {
+  $("stickSeg").innerHTML = [1, 2, 3, 4].map(n => {
+    const m = STICK_MODES[n], f = axis => Object.keys(m).find(k => m[k] === axis);
+    return `<button data-n="${n}" class="${n === S.stickMode ? "sel" : ""}"><div class="t1">MODE ${n}${n === 2 ? " ★" : ""}</div>` +
+      `<div class="t2">왼쪽 ${FN_EN[f("Ly")]}·${FN_EN[f("Lx")]}</div></button>`;
+  }).join("");
+  $("stickDesc").innerHTML = ["L", "R"].map(sd =>
+    `<div><b>${sd === "L" ? "LEFT STICK · 왼쪽" : "RIGHT STICK · 오른쪽"}</b>${FN_KO[fnOf(sd + "y")]}<br>${FN_KO[fnOf(sd + "x")]}</div>`).join("");
+  document.querySelector("#stickL span").textContent = `${FN_EN[fnOf("Ly")]} · ${FN_EN[fnOf("Lx")]}`;
+  document.querySelector("#stickR span").textContent = `${FN_EN[fnOf("Ry")]} · ${FN_EN[fnOf("Rx")]}`;
+  $("stickSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+    S.stickMode = +b.dataset.n; saveSettings(); renderStickModes();
+    if (map && map.drills) buildMap(0, S.drill);       // 연습 맵 힌트 문구 갱신
+  });
 }
 function renderModes() {
   $("modeSeg").innerHTML = Object.entries(MODES).map(([k, m]) => {
@@ -914,7 +950,7 @@ $("tReset").onclick = () => {
   const b = $("tReset"); b.textContent = "✓ 기본값으로 되돌렸어요"; setTimeout(() => { b.textContent = "↺ 기본값으로 되돌리기"; }, 1500);
 };
 renderTune();
-renderModes(); renderSpeed(); renderKeys();
+renderModes(); renderSpeed(); renderStickModes(); renderKeys();
 // 그래픽 드라이버가 WebGL을 끊으면(메모리 부족 등) 자동으로 다시 불러옴
 canvas.addEventListener("webglcontextlost", e => { e.preventDefault(); $("loading").textContent = "RELOADING GRAPHICS…"; $("loading").classList.remove("hidden"); });
 canvas.addEventListener("webglcontextrestored", () => location.reload());
@@ -933,9 +969,13 @@ async function captureThumbs() {
     followSun(camera.position); sky.position.copy(camera.position); updateCheckpointStates();
     renderFrame();
     const cv = document.createElement("canvas"); cv.width = 480; cv.height = 270;
-    const src = renderer.domElement, ar = src.width / src.height, sw = ar > 16 / 9 ? src.height * 16 / 9 : src.width, sh = sw * 9 / 16;
-    cv.getContext("2d").drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 270);
-    try { localStorage.setItem(THUMB_KEY(MAPS[i].id), cv.toDataURL("image/jpeg", 0.82)); } catch (e) {}
+    const src = renderer.domElement;
+    if (!src.width || !src.height) continue;          // 창이 아직 0 크기면 다음에 다시 찍음
+    const ar = src.width / src.height, sw = ar > 16 / 9 ? src.height * 16 / 9 : src.width, sh = sw * 9 / 16;
+    try {
+      cv.getContext("2d").drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, 480, 270);
+      localStorage.setItem(THUMB_KEY(MAPS[i].id), cv.toDataURL("image/jpeg", 0.82));
+    } catch (e) {}
   }
 }
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(async () => {
