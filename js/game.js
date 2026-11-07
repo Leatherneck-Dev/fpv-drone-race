@@ -610,25 +610,6 @@ function tone(freq, dur, type = "square", vol = 0.06, slide = 0) {
     o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
   } catch (e) {}
 }
-// 시동 중 모터 소리 (스로틀·속도에 따라 높낮이 변화)
-let hum = null;
-function motorHum(on, inp) {
-  if (!on) { if (hum) { hum.g.gain.setTargetAtTime(0, actx.currentTime, 0.08); } return; }
-  const a = audio(); if (!a) return;
-  if (!hum) {
-    // 소형 드론 프로펠러의 높은 "윙~" 소리: 고음 톱니파 2개(살짝 어긋나 맥놀이) + 대역 필터
-    const o = a.createOscillator(), o2 = a.createOscillator(), bp = a.createBiquadFilter(), hp = a.createBiquadFilter(), g = a.createGain();
-    o.type = "sawtooth"; o2.type = "sawtooth";
-    hp.type = "highpass"; hp.frequency.value = 350;
-    bp.type = "peaking"; bp.frequency.value = 2400; bp.gain.value = 6; bp.Q.value = 1.2;
-    g.gain.value = 0;
-    o.connect(hp); o2.connect(hp); hp.connect(bp).connect(g).connect(a.destination); o.start(); o2.start();
-    hum = { o, o2, g };
-  }
-  const f = 560 + Math.max(0, inp.th) * 380 + Math.abs(inp.pitch) * 120 + Math.abs(inp.roll) * 120 + (drone.grounded ? -120 : 0);
-  hum.o.frequency.setTargetAtTime(f, a.currentTime, 0.06); hum.o2.frequency.setTargetAtTime(f * 1.012 + 3, a.currentTime, 0.06);
-  hum.g.gain.setTargetAtTime(0.012, a.currentTime, 0.1);
-}
 const sfx = {
   gate: () => { tone(1046, 0.08, "triangle", 0.09); setTimeout(() => tone(1568, 0.1, "triangle", 0.08), 55); },
   thud: k => {                           // 쿠·쿠·쿵
@@ -936,10 +917,8 @@ function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; T += dt;
   const inp = readInput(dt);
   const inMenu = !$("menu").classList.contains("hidden");
-  if (inMenu) motorHum(false);
   if (!inMenu) {
     checkArmGesture(inp.raw, dt);
-    motorHum(drone.armed && drone.tumble <= 0, inp);
     acc += dt;
     while (acc >= STEP) { physicsStep(STEP, inp); race.simTime += STEP; acc -= STEP; }
   }
