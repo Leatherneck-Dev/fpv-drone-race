@@ -8,8 +8,19 @@
 (function () {
   "use strict";
   const cfg = window.SIM_CONFIG || {};
+  // 수업 코드: 화면에서 입력한 값(이 PC에 저장) → 없으면 config 기본값. (예전 링크의 ?room= 도 계속 지원)
   const params = new URLSearchParams(location.search);
-  const room = ((params.get("room") || cfg.room || "class").replace(/[^\w가-힣-]/g, "").slice(0, 30)) || "class";
+  const cleanRoom = s => String(s || "").replace(/[^\w가-힣-]/g, "").slice(0, 30);
+  let saved = ""; try { saved = localStorage.getItem("fpv-room") || ""; } catch (e) {}
+  const room = cleanRoom(params.get("room")) || cleanRoom(saved) || cleanRoom(cfg.room) || "class";
+  // 화면에서 수업 코드를 바꾸면 저장하고 새로 불러옴 (순위표 연결을 처음부터 다시)
+  function setRoom(code) {
+    const c = cleanRoom(code);
+    if (!c) return false;
+    try { localStorage.setItem("fpv-room", c); } catch (e) {}
+    location.href = location.pathname + location.hash;
+    return true;
+  }
   const teamKey = t => String(t).trim().replace(/[\/.#$\[\]\s]+/g, "_").slice(0, 40) || "noname";
 
   const MAP_INFO = [
@@ -148,7 +159,7 @@
   }
 
   window.Records = {
-    room, teamKey, ready, MAP_INFO, LEVEL_NAME, MODE_NAME,
+    room, setRoom, cleanRoom, teamKey, ready, MAP_INFO, LEVEL_NAME, MODE_NAME,
     get kind() { return impl ? impl.kind : "loading"; },
     submit: e => MAP_INFO.some(m => m.id === e.map && m.ranked)
       ? ready.then(i => i.submit(e))
