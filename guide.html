@@ -133,9 +133,9 @@
       <h2><span class="n">02</span>주소와 수업 코드</h2>
       <table>
         <tr><th>화면</th><th>주소</th><th>어디서</th></tr>
-        <tr><td><b>시뮬레이터</b></td><td><code>fpv-drone-race.web.app</code></td><td>학생 PC</td></tr>
-        <tr><td><b>순위 화면</b></td><td><code>fpv-drone-race.web.app/board</code></td><td>교실 앞 화면(TV·프로젝터)</td></tr>
-        <tr><td><b>사용 설명서</b></td><td><code>fpv-drone-race.web.app/guide</code></td><td>이 문서</td></tr>
+        <tr><td><b>시뮬레이터</b></td><td><code>fpvrace.web.app</code></td><td>학생 PC</td></tr>
+        <tr><td><b>순위 화면</b></td><td><code>fpvrace.web.app/board</code></td><td>교실 앞 화면(TV·프로젝터)</td></tr>
+        <tr><td><b>사용 설명서</b></td><td><code>fpvrace.web.app/guide</code></td><td>이 문서</td></tr>
       </table>
       <p class="muted">주소창에 위 주소만 입력하면 됩니다(<code>https://</code> 생략 가능).</p>
       <h3>수업 코드란?</h3>
@@ -376,7 +376,7 @@
     <section id="board">
       <h2><span class="n">11</span>교실 순위 화면</h2>
       <ol class="steps">
-        <li>교실 앞 PC에서 <code>fpv-drone-race.web.app/board</code>를 <b>Chrome</b>으로 엽니다.</li>
+        <li>교실 앞 PC에서 <code>fpvrace.web.app/board</code>를 <b>Chrome</b>으로 엽니다.</li>
         <li>오른쪽 위 <b>수업 코드</b> 칸에 코드를 입력하고 <b>[적용]</b>을 누릅니다.</li>
         <li><kbd>F11</kbd>로 전체 화면을 켭니다.</li>
         <li>오른쪽 위가 <span class="pill r" style="color:#fff;background:rgba(255,59,85,.2)">● LIVE</span> 인지 확인합니다. (모든 PC 기록이 실시간으로 올라오는 상태)</li>
@@ -396,7 +396,7 @@
     <section id="class">
       <h2><span class="n">12</span>수업 진행 순서 (예시)</h2>
       <ol class="steps">
-        <li><b>수업 전</b>: 수업 코드를 정합니다(예: <code>1105-3반</code>). 교실 앞 PC에서 <code>fpv-drone-race.web.app/board</code>를 열고, 오른쪽 위 <b>수업 코드 칸에 입력 → [적용]</b>. 학생들에게 주소 <code>fpv-drone-race.web.app</code>와 수업 코드를 칠판에 적어 줍니다.</li>
+        <li><b>수업 전</b>: 수업 코드를 정합니다(예: <code>1105-3반</code>). 교실 앞 PC에서 <code>fpvrace.web.app/board</code>를 열고, 오른쪽 위 <b>수업 코드 칸에 입력 → [적용]</b>. 학생들에게 주소 <code>fpvrace.web.app</code>와 수업 코드를 칠판에 적어 줍니다.</li>
         <li><b>학생 PC</b>: 주소를 열고 메인 화면 오른쪽 위 <b>수업 코드 칸에 같은 코드 입력 → [적용]</b>.</li>
         <li><b>연결</b>: 실제 드론은 끄고, 조종기를 USB로 연결 → [연결] → COM 포트 선택.</li>
         <li><b>팀 이름</b> 입력 → <b>앵글 · 1단</b>으로 시작 권장.</li>
@@ -410,7 +410,7 @@
 
     <section id="teacher">
       <h2><span class="n">13</span>선생님 설정</h2>
-      <p><code>config.js</code> 파일에서 바꿉니다. 고친 뒤 사이트(<code>fpv-drone-race.web.app</code>, Firebase Hosting)에 <b>다시 배포</b>해야 반영됩니다. 원본 파일은 GitHub 저장소에 함께 보관됩니다.</p>
+      <p><code>config.js</code> 파일에서 바꿉니다. 고친 뒤 사이트(<code>fpvrace.web.app</code>, Firebase Hosting)에 <b>다시 배포</b>해야 반영됩니다. 원본 파일은 GitHub 저장소에 함께 보관됩니다.</p>
       <table>
         <tr><th>항목</th><th>예시</th><th>설명</th></tr>
         <tr><td><code>room</code></td><td><code>"class"</code></td><td>화면에서 수업 코드를 입력하지 않았을 때 쓰는 기본 코드</td></tr>
@@ -464,6 +464,6 @@
     </section>
   </main>
 </div>
-<footer>FPV 드론 레이스 · CoDrone EDU 조종기 연동 시뮬레이터 · <a href="./">시뮬레이터</a> · <a href="board">순위 화면</a> · fpv-drone-race.web.app</footer>
+<footer>FPV 드론 레이스 · CoDrone EDU 조종기 연동 시뮬레이터 · <a href="./">시뮬레이터</a> · <a href="board">순위 화면</a> · fpvrace.web.app</footer>
 </body>
 </html>
