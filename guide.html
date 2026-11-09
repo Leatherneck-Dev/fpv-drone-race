@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPV 드론 레이스 사용 설명서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e15; --panel: #111823; --panel2: #161f2c; --edge: #243041; --text: #e9eef5; --muted: #93a1b5;
+    --acc: #2dff8f; --acc2: #34d3ff; --gold: #ffc53a; --bad: #ff5d6c; --num: "Rajdhani", "Noto Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.75 "Noto Sans KR", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--acc2); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); } nav.toc { position: static !important; max-height: none !important; } }
+
+  header.hero { border-bottom: 1px solid var(--edge); background: radial-gradient(900px 300px at 20% 0%, rgba(45,255,143,.12), transparent 70%), radial-gradient(700px 300px at 90% 0%, rgba(52,211,255,.12), transparent 70%); }
+  header.hero .in { max-width: 1180px; margin: 0 auto; padding: 44px 20px 34px; }
+  .brand { font: 700 15px var(--num); letter-spacing: .4em; color: var(--acc); }
+  h1 { margin: 6px 0 10px; font-size: clamp(28px, 4vw, 44px); font-weight: 900; letter-spacing: -.01em; }
+  .lead { color: #c3cedd; max-width: 760px; margin: 0; }
+  .quick { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .quick a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--edge); color: var(--text); text-decoration: none; font-weight: 700; }
+  .quick a.main { background: var(--acc); color: #04150c; border-color: var(--acc); }
+  .quick a:hover { filter: brightness(1.1); }
+
+  nav.toc { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow: auto; padding: 26px 0; }
+  nav.toc b { display: block; font: 700 12px var(--num); letter-spacing: .3em; color: var(--muted); margin-bottom: 10px; }
+  nav.toc a { display: block; padding: 5px 10px; border-left: 2px solid var(--edge); color: #c7d1de; text-decoration: none; font-size: 14.5px; }
+  nav.toc a:hover { border-left-color: var(--acc); color: #fff; }
+
+  main { padding: 26px 0 80px; min-width: 0; }
+  section { margin-bottom: 52px; }
+  h2 { font-size: 26px; font-weight: 900; margin: 0 0 14px; display: flex; align-items: center; gap: 12px; }
+  h2 .n { font: 700 15px var(--num); color: #04150c; background: var(--acc); border-radius: 6px; padding: 2px 9px; letter-spacing: .05em; }
+  h3 { font-size: 18px; margin: 26px 0 8px; color: #fff; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 22px; margin: 8px 0; } li { margin: 4px 0; }
+  .muted { color: var(--muted); }
+  kbd { font: 700 13px var(--num); padding: 1px 7px; border-radius: 5px; border: 1px solid #4a5a70; border-bottom-width: 2px; background: #1d2736; color: #fff; }
+  code { font-family: Consolas, monospace; font-size: 14px; background: #1a2331; border: 1px solid var(--edge); padding: 1px 6px; border-radius: 4px; color: #d9f7ff; word-break: break-all; }
+
+  .card { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 16px 20px; margin: 12px 0; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .grid2, .grid3, .grid4 { grid-template-columns: minmax(0, 1fr); } }
+  .note { border-left: 4px solid var(--acc2); background: rgba(52,211,255,.07); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0; }
+  .warn { border-left: 4px solid var(--gold); background: rgba(255,197,58,.08); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0; }
+  .danger { border-left: 4px solid var(--bad); background: rgba(255,93,108,.08); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0; }
+  .note b, .warn b, .danger b { color: #fff; }
+
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps > li { counter-increment: s; position: relative; padding: 12px 16px 12px 58px; margin: 10px 0; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; }
+  .steps > li::before { content: counter(s); position: absolute; left: 14px; top: 12px; width: 30px; height: 30px; border-radius: 50%; background: var(--acc2); color: #061018; font: 700 16px/30px var(--num); text-align: center; }
+  .steps > li b { color: #fff; }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  th { color: var(--muted); font-weight: 700; font-size: 13.5px; background: var(--panel2); }
+  td b { color: #fff; }
+
+  /* 스틱 그림 */
+  .sticks { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+  .stk { text-align: center; }
+  .stk svg { width: 200px; height: 200px; }
+  .stk .t { font-weight: 900; margin-top: 4px; }
+  .pill { display: inline-block; font-size: 12.5px; font-weight: 700; padding: 1px 9px; border-radius: 999px; border: 1px solid var(--edge); background: var(--panel2); }
+  .pill.g { color: var(--acc); border-color: rgba(45,255,143,.4); } .pill.y { color: var(--gold); border-color: rgba(255,197,58,.4); } .pill.r { color: var(--bad); border-color: rgba(255,93,108,.4); }
+  .dots { letter-spacing: 2px; color: var(--gold); }
+  .faq details { background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 10px 16px; margin: 8px 0; }
+  .faq summary { cursor: pointer; font-weight: 700; color: #fff; }
+  .faq details[open] summary { margin-bottom: 6px; }
+  footer { border-top: 1px solid var(--edge); color: var(--muted); font-size: 13.5px; padding: 20px; text-align: center; }
+
+  @media print {
+    :root { --bg: #fff; --panel: #fff; --panel2: #f2f4f7; --edge: #d5dbe3; --text: #111; --muted: #555; }
+    nav.toc, .quick { display: none; } .wrap { display: block; } header.hero { background: none; }
+    h2 .n { color: #fff; background: #333; } kbd, code { background: #f2f4f7; color: #111; } .stk svg * { stroke: #333 !important; }
+    section { break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+<header class="hero"><div class="in">
+  <div class="brand">FPV DRONE RACE</div>
+  <h1>FPV 드론 레이스 사용 설명서</h1>
+  <p class="lead">CoDrone EDU 조종기를 컴퓨터에 USB로 연결해, 드론의 눈(FPV)으로 게이트를 통과하며 기록을 겨루는 시뮬레이터입니다. 조종기 연결부터 비행, 교실 순위 화면 운영까지 순서대로 설명합니다.</p>
+  <div class="quick">
+    <a class="main" href="./" target="_blank">▶ 시뮬레이터 열기</a>
+    <a href="board.html" target="_blank">🏆 순위 화면 열기</a>
+    <a href="#trouble">🛠 문제 해결</a>
+  </div>
+</div></header>
+
+<div class="wrap">
+  <nav class="toc">
+    <b>CONTENTS</b>
+    <a href="#ready">1. 준비물</a>
+    <a href="#links">2. 주소와 수업 코드</a>
+    <a href="#connect">3. 조종기 연결</a>
+    <a href="#menu">4. 메인 화면 설정</a>
+    <a href="#arm">5. 시동 걸기</a>
+    <a href="#fly">6. 조종 방법 (Mode 2)</a>
+    <a href="#race">7. 레이스 규칙</a>
+    <a href="#maps">8. 맵과 연습 모드</a>
+    <a href="#hud">9. 게임 화면 보는 법</a>
+    <a href="#keys">10. 단축키·버튼</a>
+    <a href="#board">11. 교실 순위 화면</a>
+    <a href="#class">12. 수업 진행 순서</a>
+    <a href="#teacher">13. 선생님 설정</a>
+    <a href="#trouble">14. 문제 해결</a>
+  </nav>
+
+  <main>
+    <section id="ready">
+      <h2><span class="n">01</span>준비물</h2>
+      <div class="grid3">
+        <div class="card"><b>💻 컴퓨터</b><br>Windows PC 또는 노트북<br><span class="muted">인터넷 연결 필요</span></div>
+        <div class="card"><b>🌐 브라우저</b><br><b>Chrome</b> 또는 <b>Edge</b><br><span class="muted">조종기 연결(Web Serial)은 이 두 브라우저에서만 됩니다</span></div>
+        <div class="card"><b>🎮 조종기</b><br>CoDrone EDU 조종기 + <b>USB 케이블</b><br><span class="muted">충전 전용이 아닌 데이터 케이블</span></div>
+      </div>
+      <div class="danger"><b>⚠ 실제 드론은 꺼 두세요.</b> 조종기와 페어링된 드론이 켜져 있으면 시뮬레이터를 조종하는 동안 실제 드론도 함께 움직일 수 있습니다.</div>
+      <p class="muted">조종기가 없어도 키보드나 게임패드로 연습할 수 있습니다. (<a href="#keys">10. 단축키</a> 참고)</p>
+    </section>
+
+    <section id="links">
+      <h2><span class="n">02</span>주소와 수업 코드</h2>
+      <table>
+        <tr><th>화면</th><th>주소</th><th>어디서</th></tr>
+        <tr><td><b>시뮬레이터</b></td><td><code>https://leatherneck-dev.github.io/fpv-drone-race/?room=수업코드</code></td><td>학생 PC</td></tr>
+        <tr><td><b>순위 화면</b></td><td><code>https://leatherneck-dev.github.io/fpv-drone-race/board.html?room=수업코드</code></td><td>교실 앞 화면(TV·프로젝터)</td></tr>
+      </table>
+      <h3>수업 코드란?</h3>
+      <p><b>순위표의 이름</b>입니다. 같은 수업 코드를 쓰는 PC끼리 기록이 한 순위표에 모입니다. 주소 끝의 <code>?room=</code> 뒤에 붙입니다.</p>
+      <div class="card">
+        예) 11월 5일 3반 수업 → 코드를 <code>1105-3반</code>으로 정하면<br>
+        학생: <code>.../fpv-drone-race/?room=1105-3반</code><br>
+        교실 앞: <code>.../fpv-drone-race/board.html?room=1105-3반</code>
+      </div>
+      <ul>
+        <li><b>두 주소의 코드가 반드시 같아야</b> 기록이 순위 화면에 나옵니다.</li>
+        <li>코드를 바꾸면 빈 순위표가 새로 시작됩니다. 이전 반 기록은 그 코드로 다시 열면 볼 수 있습니다.</li>
+        <li>띄어쓰기와 특수문자(<code>/ . #</code>)는 빼 주세요. <code>?room=</code>을 빼면 기본 코드 <code>class</code>가 됩니다.</li>
+        <li>학생 메뉴 오른쪽 위에 현재 수업 코드가 표시되고, <b>“교실 순위 화면 열기 ↗”</b>를 누르면 같은 코드의 순위 화면이 열립니다.</li>
+      </ul>
+    </section>
+
+    <section id="connect">
+      <h2><span class="n">03</span>조종기 연결</h2>
+      <ol class="steps">
+        <li><b>조종기 전원을 켭니다.</b> (실제 드론은 꺼 둔 상태)</li>
+        <li><b>USB 케이블로 조종기를 PC에 연결</b>합니다.</li>
+        <li><b>Chrome/Edge로 시뮬레이터 주소</b>를 엽니다.</li>
+        <li>메인 화면 오른쪽 <b>CONTROLLER · 조종기</b>의 <b>[연결]</b> 버튼을 누릅니다.</li>
+        <li>브라우저 창에 나오는 목록에서 조종기의 <b>COM 포트</b>를 고르고 <b>[연결]</b>을 누릅니다.<br>
+          <span class="muted">보통 “STMicroelectronics Virtual COM Port (COM3)”처럼 표시됩니다. 번호는 PC마다 다릅니다.</span></li>
+        <li>상태가 초록 점 <span class="pill g">● 조종기 연결됨 · 50Hz 수신 중</span> 으로 바뀌면 완료입니다.</li>
+        <li><b>스틱 보정</b>: 스틱에서 손을 뗀 상태로 연결하면 자동으로 가운데를 맞춥니다. 비행 중 드론이 혼자 한쪽으로 가면, 손을 뗀 채로 <b>[보정]</b>을 누르세요.</li>
+      </ol>
+      <div class="note"><b>상태 표시 읽는 법</b><br>
+        <span class="pill g">● 연결됨</span> 정상 · <span class="pill y">● 응답 대기 중</span> 포트는 열렸지만 조종기 응답 없음(전원 확인) · <span class="pill r">● 연결 실패/끊어짐</span> 케이블·포트 확인 → <a href="#trouble">문제 해결</a></div>
+    </section>
+
+    <section id="menu">
+      <h2><span class="n">04</span>메인 화면 설정</h2>
+      <div class="grid2">
+        <div class="card">
+          <b>왼쪽</b>
+          <ul>
+            <li><b>TEAM · 팀 이름</b> — 순위표에 표시될 이름 (예: <code>3조 B팀</code>, 최대 16자). <b>반드시 입력</b>해야 시작됩니다.</li>
+            <li><b>FLIGHT MODE · 비행 모드</b> — 앵글 / 호라이즌 / 아크로</li>
+            <li><b>SPEED · 최고 속도</b> — 1단 / 2단 / 3단</li>
+          </ul>
+        </div>
+        <div class="card">
+          <b>오른쪽</b>
+          <ul>
+            <li><b>CONTROLLER</b> — 조종기 연결·보정</li>
+            <li><b>HOW TO FLY</b> — 스틱 역할과 시동 방법 요약</li>
+            <li><b>조종 설정</b> — 감도·카메라 각도 등 (펼쳐서 사용)</li>
+            <li><b>비행 시작</b> 버튼 (<kbd>Enter</kbd>)</li>
+          </ul>
+        </div>
+      </div>
+      <p><b>아래쪽</b>에서 맵을 고릅니다. 고른 맵이 화면 가운데 배경으로 미리 보입니다.</p>
+
+      <h3>비행 모드</h3>
+      <table>
+        <tr><th>모드</th><th>난이도</th><th>특징</th></tr>
+        <tr><td><b>앵글</b></td><td><span class="pill g">쉬움</span></td><td>스틱을 놓으면 자동으로 수평이 되고 높이도 유지됩니다. CoDrone EDU와 같은 느낌. <b>처음엔 이 모드 추천</b></td></tr>
+        <tr><td><b>호라이즌</b></td><td><span class="pill y">보통</span></td><td>스틱 가운데에선 자동 수평, 끝까지 밀면 뒤집기(플립)까지. 높이는 스로틀로 직접 조절</td></tr>
+        <tr><td><b>아크로</b></td><td><span class="pill r">어려움</span></td><td>자동 수평 없음. 기울인 각도가 그대로 유지되는 레이싱 선수용 모드</td></tr>
+      </table>
+
+      <h3>최고 속도</h3>
+      <table>
+        <tr><th>단계</th><th>앵글 모드 최고 속도</th><th>카메라 각도(자동)</th></tr>
+        <tr><td><b>1단</b> 천천히</td><td>약 16 km/h</td><td>0° (앵글) / 15° (호라이즌·아크로)</td></tr>
+        <tr><td><b>2단</b> 보통</td><td>약 31 km/h</td><td>12° / 25°</td></tr>
+        <tr><td><b>3단</b> 빠르게</td><td>약 47 km/h</td><td>24° / 35°</td></tr>
+      </table>
+      <p class="muted">빠를수록 드론이 앞으로 많이 기울어서, 카메라를 위로 들어 줘야 앞이 보입니다. (실제 FPV 드론과 같은 원리)</p>
+
+      <h3>조종 설정 (감도 · 카메라 각도)</h3>
+      <table>
+        <tr><th>설정</th><th>설명</th><th>기본값</th></tr>
+        <tr><td><b>감도</b></td><td>회전·기울기 빠르기</td><td>100%</td></tr>
+        <tr><td><b>엑스포</b></td><td>스틱 가운데를 부드럽게(미세 조작 쉬움), 끝은 그대로</td><td>35%</td></tr>
+        <tr><td><b>스로틀 감도</b></td><td>상승·하강 힘</td><td>100%</td></tr>
+        <tr><td><b>데드존</b></td><td>스틱의 작은 떨림 무시</td><td>5%</td></tr>
+        <tr><td><b>카메라 각도</b></td><td>“자동”을 끄면 0~45° 직접 지정</td><td>자동</td></tr>
+        <tr><td><b>시야각(FOV)</b></td><td>화면에 보이는 범위. 거리감이 이상하면 80° 정도로</td><td>92°</td></tr>
+        <tr><td><b>스틱 반전</b></td><td>스틱이 반대로 움직일 때 축별로 체크</td><td>꺼짐</td></tr>
+      </table>
+      <div class="note"><b>[↺ 기본값으로 되돌리기]</b>를 누르면 위 설정과 스틱 보정값이 처음 상태로 돌아갑니다.<br>
+        아크로가 어려우면 <b>감도 50~70%, 엑스포 50% 이상</b>으로 낮춰 보세요.</div>
+    </section>
+
+    <section id="arm">
+      <h2><span class="n">05</span>시동 걸기</h2>
+      <p>실제 드론처럼 <b>시동을 걸어야 날 수 있습니다.</b> 시동 전에는 스로틀을 올려도 뜨지 않습니다.</p>
+      <div class="sticks">
+        <div class="stk">
+          <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#111823" stroke="#3a4a60" stroke-width="3"/><line x1="100" y1="20" x2="100" y2="180" stroke="#2a3646"/><line x1="20" y1="100" x2="180" y2="100" stroke="#2a3646"/>
+            <line x1="100" y1="100" x2="150" y2="150" stroke="#ffc53a" stroke-width="5" stroke-linecap="round"/><polygon points="160,160 138,156 156,138" fill="#ffc53a"/><circle cx="150" cy="150" r="14" fill="#2dff8f"/></svg>
+          <div class="t">왼쪽 스틱 ↘</div><div class="muted">아래 + 오른쪽(안쪽)</div>
+        </div>
+        <div class="stk">
+          <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#111823" stroke="#3a4a60" stroke-width="3"/><line x1="100" y1="20" x2="100" y2="180" stroke="#2a3646"/><line x1="20" y1="100" x2="180" y2="100" stroke="#2a3646"/>
+            <line x1="100" y1="100" x2="50" y2="150" stroke="#ffc53a" stroke-width="5" stroke-linecap="round"/><polygon points="40,160 44,138 62,156" fill="#ffc53a"/><circle cx="50" cy="150" r="14" fill="#2dff8f"/></svg>
+          <div class="t">오른쪽 스틱 ↙</div><div class="muted">아래 + 왼쪽(안쪽)</div>
+        </div>
+      </div>
+      <ol class="steps">
+        <li>드론이 <b>땅에 있을 때</b>, 양쪽 스틱을 <b>동시에 안쪽 아래로</b> 모읍니다. (끝까지 안 밀어도 절반 정도면 됩니다)</li>
+        <li>잠깐(약 0.3초) 유지하면 화면에 <b style="color:var(--acc)">시동됨</b>이 뜨고, 아래쪽 상태가 <span class="pill g">● 시동됨</span>으로 바뀝니다.</li>
+        <li>스틱을 놓고, 왼쪽 스틱을 위로 올리면 이륙합니다.</li>
+      </ol>
+      <ul>
+        <li><b>시동 끄기</b>: 땅에 내려앉은 뒤 같은 동작을 한 번 더. (공중에서는 꺼지지 않습니다)</li>
+        <li><b>키보드</b>: <kbd>Space</kbd> 키로 시동 걸기/끄기</li>
+        <li>출발점으로 돌아가거나(R·처음으로·추락) 연습 종류를 바꾸면 <b>시동이 꺼진 상태</b>로 시작합니다. 다시 시동을 걸어 주세요.</li>
+      </ul>
+    </section>
+
+    <section id="fly">
+      <h2><span class="n">06</span>조종 방법 (Mode 2)</h2>
+      <p>CoDrone EDU와 같은 <b>Mode 2</b> 방식입니다.</p>
+      <div class="sticks">
+        <div class="stk">
+          <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#111823" stroke="#3a4a60" stroke-width="3"/>
+            <g stroke="#34d3ff" stroke-width="4" fill="#34d3ff"><line x1="100" y1="35" x2="100" y2="165"/><polygon points="100,22 90,40 110,40"/><polygon points="100,178 90,160 110,160"/></g>
+            <g stroke="#ffc53a" stroke-width="4" fill="#ffc53a"><line x1="35" y1="100" x2="165" y2="100"/><polygon points="22,100 40,90 40,110"/><polygon points="178,100 160,90 160,110"/></g>
+            <circle cx="100" cy="100" r="13" fill="#2dff8f"/></svg>
+          <div class="t">왼쪽 스틱</div>
+          <div><span style="color:#34d3ff">↑↓ 상승 / 하강 (스로틀)</span><br><span style="color:#ffc53a">←→ 왼쪽 / 오른쪽 회전 (요)</span></div>
+        </div>
+        <div class="stk">
+          <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="90" fill="#111823" stroke="#3a4a60" stroke-width="3"/>
+            <g stroke="#34d3ff" stroke-width="4" fill="#34d3ff"><line x1="100" y1="35" x2="100" y2="165"/><polygon points="100,22 90,40 110,40"/><polygon points="100,178 90,160 110,160"/></g>
+            <g stroke="#ffc53a" stroke-width="4" fill="#ffc53a"><line x1="35" y1="100" x2="165" y2="100"/><polygon points="22,100 40,90 40,110"/><polygon points="178,100 160,90 160,110"/></g>
+            <circle cx="100" cy="100" r="13" fill="#2dff8f"/></svg>
+          <div class="t">오른쪽 스틱</div>
+          <div><span style="color:#34d3ff">↑↓ 전진 / 후진 (피치)</span><br><span style="color:#ffc53a">←→ 왼쪽 / 오른쪽 이동 (롤)</span></div>
+        </div>
+      </div>
+      <div class="note"><b>비행 팁</b>
+        <ul>
+          <li>스틱은 <b>살짝만</b>! 앵글 모드에서는 스틱을 놓으면 그 자리에 멈춥니다.</li>
+          <li>회전할 때는 <b>왼쪽 스틱으로 방향을 돌리면서 오른쪽 스틱으로 살짝 전진</b>하면 부드럽게 돕니다.</li>
+          <li>게이트 앞에서는 <b>속도를 줄이고 높이부터 맞춘 뒤</b> 통과하세요.</li>
+        </ul></div>
+    </section>
+
+    <section id="race">
+      <h2><span class="n">07</span>레이스 규칙</h2>
+      <ol class="steps">
+        <li><b>시동</b>을 걸고 이륙합니다. 타이머는 아직 0입니다.</li>
+        <li><b>초록색 1번 게이트를 통과하는 순간 타이머 시작!</b></li>
+        <li>게이트를 <b>번호 순서대로</b> 통과합니다. 순서를 건너뛴 게이트는 인정되지 않습니다.</li>
+        <li><b>마지막 게이트(FINISH)</b>를 통과하면 완주 → 기록이 순위표에 올라갑니다. (교육용 맵 “정밀 착륙”은 H 착륙장에 착륙하면 완주)</li>
+      </ol>
+      <table>
+        <tr><th>게이트 색</th><th>의미</th></tr>
+        <tr><td><span class="pill g">초록</span></td><td>지금 통과해야 할 <b>다음 게이트</b></td></tr>
+        <tr><td><span class="pill y">노랑</span></td><td>그다음 게이트</td></tr>
+        <tr><td>맵 색(분홍·파랑·흰색)</td><td>아직 차례가 아닌 게이트</td></tr>
+        <tr><td>회색</td><td>이미 통과한 게이트</td></tr>
+      </table>
+      <h3>게이트 종류</h3>
+      <div class="grid4">
+        <div class="card"><b>사각 게이트</b><br><span class="muted">가장 기본</span></div>
+        <div class="card"><b>링(원형)</b><br><span class="muted">가운데로 통과</span></div>
+        <div class="card"><b>아치</b><br><span class="muted">바닥에 붙은 반원</span></div>
+        <div class="card"><b>다이브 ▼</b><br><span class="muted">수평 게이트, <b>위에서 아래로</b> 통과</span></div>
+      </div>
+      <p>터널(헛간·컨테이너·빌딩 통로)은 입구 게이트를 통과하면 인정됩니다.</p>
+      <h3>충돌</h3>
+      <ul>
+        <li><b>살짝 부딪힘</b>: 튕기고 흙먼지·나뭇잎·불꽃 효과. 계속 비행 가능 (결과에 “부딪힘 횟수”로 기록)</li>
+        <li><b>세게 부딪힘·추락</b>: 드론이 떨어진 뒤 <b>출발점에서 처음부터</b> 다시 (시동도 다시)</li>
+      </ul>
+      <h3>기록</h3>
+      <ul>
+        <li>완주할 때마다 <b>1줄씩</b> 순위표에 올라갑니다. 같은 팀도 여러 번 올라갈 수 있고, 빠른 순서로 10개가 보입니다.</li>
+        <li>완주 화면에 <b>현재 순위</b>와 <b>팀 최고기록 비교</b>가 나옵니다.</li>
+        <li>게이트를 지날 때마다 우리 팀 최고기록보다 빠르면 <span style="color:var(--acc)">−0.32</span>, 느리면 <span style="color:var(--bad)">+0.32</span>처럼 표시됩니다.</li>
+        <li>완주 후 1번 게이트로 다시 날아가면 바로 새 도전이 시작됩니다.</li>
+      </ul>
+    </section>
+
+    <section id="maps">
+      <h2><span class="n">08</span>맵과 연습 모드</h2>
+      <table>
+        <tr><th>맵</th><th>난이도</th><th>특징</th><th>순위</th></tr>
+        <tr><td><b>교육용 맵</b></td><td><span class="dots">★☆☆☆☆</span> 입문</td><td>넓은 게이트 · 단계별 연습 6종 · 조작 힌트</td><td>없음 (연습용)</td></tr>
+        <tr><td><b>그린 필드</b></td><td><span class="dots">★★☆☆☆</span> 쉬움</td><td>노을 지는 들판 · 헛간 터널 · 언덕 · 다리 밑 · 게이트 16개</td><td>있음</td></tr>
+        <tr><td><b>물류 창고</b></td><td><span class="dots">★★★☆☆</span> 보통</td><td>실내 · 선반 통로 · 컨테이너 터널 · 캣워크 · 게이트 15개</td><td>있음</td></tr>
+        <tr><td><b>메트로 시티</b></td><td><span class="dots">★★★★★</span> 어려움</td><td>야경 · 고가도로 밑 · 옥상 · 다이브 · 빌딩 통로 · 게이트 16개</td><td>있음</td></tr>
+      </table>
+      <h3>교육용 맵 연습 6종</h3>
+      <p>교육용 맵을 고르면 화면 맨 위에 연습 버튼이 나옵니다. 버튼(또는 숫자키 <kbd>1</kbd>~<kbd>6</kbd>)으로 고릅니다.</p>
+      <div class="grid3">
+        <div class="card"><b>1 ⬆ 직진</b><br><span class="muted">오른쪽 스틱 위로 앞으로</span></div>
+        <div class="card"><b>2 ↕ 상승·하강</b><br><span class="muted">높낮이가 다른 게이트</span></div>
+        <div class="card"><b>3 ↱ 우회전</b><br><span class="muted">왼쪽 스틱 → 로 돌며 비행</span></div>
+        <div class="card"><b>4 ↰ 좌회전</b><br><span class="muted">왼쪽 스틱 ← 로 돌며 비행</span></div>
+        <div class="card"><b>5 〰 S자 슬라럼</b><br><span class="muted">좌우로 번갈아 방향 바꾸기</span></div>
+        <div class="card"><b>6 H 정밀 착륙</b><br><span class="muted">게이트 통과 후 H에 착륙</span></div>
+      </div>
+      <p>완주하면 시간과 부딪힘 횟수로 <span class="dots">★★★</span> 별 1~3개를 받습니다. 게이트 위 노란 글씨 힌트를 따라 해 보세요.</p>
+    </section>
+
+    <section id="hud">
+      <h2><span class="n">09</span>게임 화면 보는 법</h2>
+      <table>
+        <tr><th>위치</th><th>내용</th></tr>
+        <tr><td><b>위 가운데</b></td><td>타이머 · 구간 비교(−/+) · 안내 문구</td></tr>
+        <tr><td><b>왼쪽 위</b></td><td>게이트 진행(예: 3/16)과 진행 막대 · 팀 이름 · 맵 이름·난이도</td></tr>
+        <tr><td><b>오른쪽 위</b></td><td>이 맵 1위 기록 · 우리 팀 순위 (교육용 맵은 연습 별점)</td></tr>
+        <tr><td><b>화면 가운데</b></td><td>초록 괄호 = 다음 게이트 위치, 숫자 = <b>다음 게이트까지 남은 거리(m)</b>. 화면 밖이면 가장자리에 화살표</td></tr>
+        <tr><td><b>아래 가운데</b></td><td>속도(km/h) · 고도(m) · 비행 모드·속도 단계 · <b>시동 상태</b></td></tr>
+        <tr><td><b>왼쪽 아래</b></td><td>[☰ 메인 메뉴] [⟲ 처음으로] 버튼과 단축키 안내</td></tr>
+        <tr><td><b>오른쪽 아래</b></td><td>왼쪽·오른쪽 스틱 위치 표시 (조종기 입력 확인용)</td></tr>
+      </table>
+    </section>
+
+    <section id="keys">
+      <h2><span class="n">10</span>단축키 · 버튼</h2>
+      <table>
+        <tr><th>키 / 버튼</th><th>기능</th></tr>
+        <tr><td><kbd>Enter</kbd></td><td>메인 화면에서 비행 시작</td></tr>
+        <tr><td><kbd>M</kbd> · <kbd>Esc</kbd> · [☰ 메인 메뉴]</td><td>메인 메뉴 열기/닫기 (맵·모드·속도 바꾸기)</td></tr>
+        <tr><td><kbd>R</kbd> · [⟲ 처음으로] · 조종기 버튼</td><td>출발점으로 돌아가기 (타이머 초기화, 시동 꺼짐)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>시동 걸기/끄기 (땅에 있을 때)</td></tr>
+        <tr><td><kbd>1</kbd> ~ <kbd>6</kbd></td><td>교육용 맵 연습 종류 바꾸기</td></tr>
+      </table>
+      <h3>키보드로 조종 (조종기가 없을 때)</h3>
+      <div class="grid2">
+        <div class="card"><b>왼쪽 스틱 = W·A·S·D</b><br><kbd>W</kbd> 상승 · <kbd>S</kbd> 하강 · <kbd>A</kbd> 왼쪽 회전 · <kbd>D</kbd> 오른쪽 회전</div>
+        <div class="card"><b>오른쪽 스틱 = 방향키</b><br><kbd>↑</kbd> 전진 · <kbd>↓</kbd> 후진 · <kbd>←</kbd> 왼쪽 이동 · <kbd>→</kbd> 오른쪽 이동</div>
+      </div>
+      <p class="muted">게임패드(Xbox 등)를 연결하면 자동으로 인식합니다. 우선순위: CoDrone 조종기 → 게임패드 → 키보드</p>
+    </section>
+
+    <section id="board">
+      <h2><span class="n">11</span>교실 순위 화면</h2>
+      <ol class="steps">
+        <li>교실 앞 PC에서 <code>board.html?room=수업코드</code> 주소를 <b>Chrome</b>으로 엽니다.</li>
+        <li><kbd>F11</kbd>로 전체 화면을 켭니다.</li>
+        <li>오른쪽 위가 <span class="pill r" style="color:#fff;background:rgba(255,59,85,.2)">● LIVE</span> 인지 확인합니다. (모든 PC 기록이 실시간으로 올라오는 상태)</li>
+        <li>필요하면 <b>🔇 소리 꺼짐</b> 버튼을 눌러 <b>🔊 소리 켜짐</b>으로 바꿉니다.</li>
+      </ol>
+      <table>
+        <tr><th>기능</th><th>설명</th></tr>
+        <tr><td><b>순위표</b></td><td>실전 맵 3개의 TOP 10. 1~3위는 금·은·동. 새 기록은 “NEW” 표시와 함께 빛납니다.</td></tr>
+        <tr><td><b>신기록 연출</b></td><td>1위가 바뀌면 화면 가득 “NEW TRACK RECORD”와 꽃가루</td></tr>
+        <tr><td><b>최근 완주(RECENT)</b></td><td>아래쪽에 최근 완주 기록이 흘러갑니다.</td></tr>
+        <tr><td><b>소리</b></td><td>켜면 1위 갱신 때 팡파르, 새 기록 때 “띵동” 알림음 (연출은 소리와 상관없이 나옴)</td></tr>
+        <tr><td><b>패널 클릭</b></td><td>그 맵 순위만 크게 보기 / 다시 클릭하면 3개 보기</td></tr>
+        <tr><td><b>기록 초기화</b></td><td>이 수업 코드의 순위와 최근 기록을 비우고 새로 시작 (모든 PC에 반영, 이전 기록은 다시 볼 수 없음)</td></tr>
+      </table>
+    </section>
+
+    <section id="class">
+      <h2><span class="n">12</span>수업 진행 순서 (예시)</h2>
+      <ol class="steps">
+        <li><b>수업 전</b>: 수업 코드를 정하고(예: <code>1105-3반</code>), 교실 앞 화면에 순위 화면을 띄웁니다. 학생용 링크를 칠판·메신저로 공유합니다.</li>
+        <li><b>연결</b>: 실제 드론은 끄고, 조종기를 USB로 연결 → [연결] → COM 포트 선택.</li>
+        <li><b>팀 이름</b> 입력 → <b>앵글 · 1단</b>으로 시작 권장.</li>
+        <li><b>교육용 맵</b>에서 연습 1~6을 순서대로 (별 3개 목표).</li>
+        <li><b>그린 필드</b>에서 첫 완주 → 순위 화면에 이름이 올라가는지 확인.</li>
+        <li>익숙해지면 <b>2단</b>, <b>물류 창고</b>, <b>메트로 시티</b>로 도전. 잘하는 학생은 호라이즌·아크로.</li>
+        <li><b>다음 반</b>은 수업 코드만 바꾸면(예: <code>1105-4반</code>) 새 순위표로 시작합니다.</li>
+      </ol>
+      <div class="warn"><b>팀이 바뀔 때는 팀 이름도 바꿔 주세요.</b> 팀 이름은 PC에 저장돼 있어서, 그대로 두면 이전 팀 이름으로 기록됩니다.</div>
+    </section>
+
+    <section id="teacher">
+      <h2><span class="n">13</span>선생님 설정</h2>
+      <p>GitHub 저장소의 <code>config.js</code> 파일에서 바꿉니다. 고친 뒤 1~2분 지나면 사이트에 반영됩니다.</p>
+      <table>
+        <tr><th>항목</th><th>예시</th><th>설명</th></tr>
+        <tr><td><code>room</code></td><td><code>"class"</code></td><td>주소에 <code>?room=</code>이 없을 때 쓰는 기본 수업 코드</td></tr>
+        <tr><td><code>speedLevels</code></td><td><code>[1, 2, 3]</code> → <code>[2]</code></td><td>고를 수 있는 속도 단계. 하나만 남기면 모두 같은 속도로 겨룸</td></tr>
+        <tr><td><code>allowedModes</code></td><td><code>["angle"]</code></td><td>고를 수 있는 비행 모드 (angle·horizon·acro)</td></tr>
+        <tr><td><code>invert</code></td><td><code>{ throttle: true, ... }</code></td><td>스틱 반전 기본값 (각 PC의 조종 설정에서도 바꿀 수 있음)</td></tr>
+        <tr><td><code>firebase</code></td><td>(설정됨)</td><td>여러 PC 기록 공유용. 지우면 각 PC에만 기록되는 로컬 모드</td></tr>
+      </table>
+      <ul>
+        <li><b>잘못된 기록 지우기</b>: Firebase 콘솔 → Firestore Database → <code>rooms</code> → 수업 코드 → <code>runs_맵이름</code>에서 해당 문서 삭제 (맵 이름: <code>field</code>, <code>warehouse</code>, <code>city</code>)</li>
+        <li><b>저장소</b>: <a href="https://github.com/Leatherneck-Dev/fpv-drone-race" target="_blank">github.com/Leatherneck-Dev/fpv-drone-race</a></li>
+      </ul>
+    </section>
+
+    <section id="trouble" class="faq">
+      <h2><span class="n">14</span>문제 해결</h2>
+      <details open><summary>[연결]을 눌러도 COM 포트 목록에 조종기가 없어요</summary>
+        <ul>
+          <li>조종기 <b>전원이 켜져 있는지</b> 확인하세요.</li>
+          <li><b>USB 케이블이 데이터용인지</b> 확인하세요. 충전 전용 케이블은 연결이 안 됩니다. 다른 케이블·다른 USB 포트로 바꿔 보세요.</li>
+          <li><b>다른 프로그램이 조종기를 쓰고 있지 않은지</b> 확인하세요. (코딩 앱·다른 브라우저 탭 등 → 닫기)</li>
+          <li>목록에 아무것도 없으면 Windows 장치 관리자 → “포트(COM & LPT)”에 조종기가 보이는지 확인하세요.</li>
+        </ul></details>
+      <details><summary>“이 브라우저는 조종기 연결을 지원하지 않아요”가 떠요</summary>
+        <p><b>Chrome</b> 또는 <b>Edge</b>로 열어 주세요. 또한 반드시 <code>https://</code> 주소로 열어야 합니다.</p></details>
+      <details><summary>연결됐는데 “응답 대기 중”에서 안 바뀌어요</summary>
+        <p>조종기 전원을 껐다 켜고, <b>[연결]</b> 버튼을 다시 눌러 주세요(해제 후 재연결). USB를 뽑았다 다시 꽂아도 됩니다.</p></details>
+      <details><summary>드론이 혼자 한쪽으로 가요</summary>
+        <p>스틱에서 손을 뗀 상태로 <b>[보정]</b>을 누르세요. 그래도 그러면 조종 설정의 <b>데드존</b>을 8~10%로 올려 보세요.</p></details>
+      <details><summary>스틱을 위로 올렸는데 반대로 움직여요</summary>
+        <p>메뉴 → <b>조종 설정</b> → 해당 축의 <b>반전</b>에 체크하세요.</p></details>
+      <details><summary>시동이 안 걸려요</summary>
+        <ul>
+          <li>드론이 <b>땅에 있을 때만</b> 걸립니다.</li>
+          <li>양쪽 스틱을 <b>동시에</b> 안쪽 아래(왼쪽 ↘, 오른쪽 ↙)로 모아 잠깐 유지하세요.</li>
+          <li>화면 오른쪽 아래 스틱 표시로 스틱이 실제로 그 방향으로 가는지 확인하세요.</li>
+          <li>키보드는 <kbd>Space</kbd>.</li>
+        </ul></details>
+      <details><summary>순위 화면에 기록이 안 떠요</summary>
+        <ul>
+          <li>학생 PC와 순위 화면의 <b>수업 코드(room)가 같은지</b> 확인하세요.</li>
+          <li>순위 화면 오른쪽 위가 <b>LIVE</b>인지 확인하세요. LOCAL이면 인터넷 연결 문제입니다.</li>
+          <li><b>교육용 맵</b>은 연습 전용이라 순위에 올라가지 않습니다.</li>
+        </ul></details>
+      <details><summary>화면이 끊기고 느려요</summary>
+        <p>느린 PC는 자동으로 그래픽 품질을 낮춥니다(풀·그림자 줄임). 다른 프로그램과 브라우저 탭을 닫아 주세요. 메트로 시티가 가장 무겁습니다.</p></details>
+      <details><summary>고친 내용이 반영이 안 돼요 / 예전 화면이 나와요</summary>
+        <p><kbd>Ctrl</kbd> + <kbd>F5</kbd>로 새로고침하세요. 브라우저가 예전 파일을 저장해 둔 경우입니다.</p></details>
+      <details><summary>게이트까지 거리가 실제보다 멀게/가깝게 느껴져요</summary>
+        <p>FPV 카메라가 넓은 각도(광각)라 실제 거리와 느낌이 다를 수 있습니다. 조종 설정의 <b>시야각</b>을 80° 정도로 낮추면 거리감이 자연스러워집니다.</p></details>
+    </section>
+  </main>
+</div>
+<footer>FPV 드론 레이스 · CoDrone EDU 조종기 연동 시뮬레이터 · <a href="./">시뮬레이터</a> · <a href="board.html">순위 화면</a></footer>
+</body>
+</html>
