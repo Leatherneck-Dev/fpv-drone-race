@@ -49,6 +49,11 @@
   .pill.local { color: var(--gold); border-color: rgba(255,197,58,.4); } .pill.local i { background: var(--gold); box-shadow: none; animation: none; }
   @keyframes pulse { 50% { opacity: .25; } }
   .pill b { color: var(--acc2); letter-spacing: .05em; }
+  .roomp { letter-spacing: .05em; padding: 4px 6px 4px 14px; }
+  .roomp input { width: 130px; font: 700 15px var(--num), "Noto Sans KR"; color: var(--acc2); background: rgba(0,0,0,.3); border: 1px solid var(--edge);
+    border-radius: 999px; padding: 4px 10px; outline: none; }
+  .roomp input:focus { border-color: var(--acc2); }
+  .roomp button { font: 700 12px "Noto Sans KR"; color: #fff; background: rgba(52,211,255,.18); border: 1px solid rgba(52,211,255,.5); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
   #clock { font: 700 clamp(18px, 1.6vw, 30px) var(--num); letter-spacing: .08em; color: #c9d4e4; min-width: 5.2em; text-align: right; }
   .btn { font: 700 13px "Noto Sans KR"; color: var(--text); background: rgba(255,255,255,.06); border: 1px solid var(--edge); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   .btn:hover { background: rgba(255,255,255,.12); }
@@ -129,11 +134,11 @@
     <div class="center"><div class="k">LIVE</div><div class="v">LEADERBOARD</div></div>
     <div class="meta">
       <span class="pill" id="conn"><i></i><span id="connTxt">CONNECTING</span></span>
-      <span class="pill">ROOM <b id="room"></b></span>
+      <span class="pill roomp">수업 코드 <input id="roomInput" maxlength="30" placeholder="예: 1105-3반" autocomplete="off"><button id="roomApply">적용</button></span>
       <span id="clock"></span>
       <button class="btn" id="btnSound">🔇 소리 꺼짐</button>
       <button class="btn hidden" id="btnClear">기록 초기화</button>
-      <a class="btn" href="guide.html#board" target="_blank" style="text-decoration:none">📖 설명서</a>
+      <a class="btn" href="guide#board" target="_blank" style="text-decoration:none">📖 설명서</a>
     </div>
   </header>
   <main id="grid"></main>
@@ -162,7 +167,11 @@ const ART = {
 };
 
 $("title").textContent = CFG.title || "FPV 드론 레이스";
-$("room").textContent = Records.room;
+// 수업 코드: 화면에서 입력 → [적용] 또는 Enter
+$("roomInput").value = Records.room;
+const applyRoom = () => { const c = Records.cleanRoom($("roomInput").value); if (c && (c !== Records.room || location.search)) Records.setRoom(c); else $("roomInput").value = Records.room; };
+$("roomApply").onclick = applyRoom;
+$("roomInput").addEventListener("keydown", e => { if (e.key === "Enter") applyRoom(); });
 document.title = `Live Leaderboard · ${Records.room}`;
 setInterval(() => { const d = new Date(), p = n => String(n).padStart(2, "0"); $("clock").textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }, 1000);
 
