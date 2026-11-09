@@ -93,7 +93,7 @@
   <p class="lead">CoDrone EDU 조종기를 컴퓨터에 USB로 연결해, 드론의 눈(FPV)으로 게이트를 통과하며 기록을 겨루는 시뮬레이터입니다. 조종기 연결부터 비행, 교실 순위 화면 운영까지 순서대로 설명합니다.</p>
   <div class="quick">
     <a class="main" href="./" target="_blank">▶ 시뮬레이터 열기</a>
-    <a href="board.html" target="_blank">🏆 순위 화면 열기</a>
+    <a href="board" target="_blank">🏆 순위 화면 열기</a>
     <a href="#trouble">🛠 문제 해결</a>
   </div>
 </div></header>
@@ -133,21 +133,25 @@
       <h2><span class="n">02</span>주소와 수업 코드</h2>
       <table>
         <tr><th>화면</th><th>주소</th><th>어디서</th></tr>
-        <tr><td><b>시뮬레이터</b></td><td><code>https://leatherneck-dev.github.io/fpv-drone-race/?room=수업코드</code></td><td>학생 PC</td></tr>
-        <tr><td><b>순위 화면</b></td><td><code>https://leatherneck-dev.github.io/fpv-drone-race/board.html?room=수업코드</code></td><td>교실 앞 화면(TV·프로젝터)</td></tr>
+        <tr><td><b>시뮬레이터</b></td><td><code>fpv-drone-race.web.app</code></td><td>학생 PC</td></tr>
+        <tr><td><b>순위 화면</b></td><td><code>fpv-drone-race.web.app/board</code></td><td>교실 앞 화면(TV·프로젝터)</td></tr>
+        <tr><td><b>사용 설명서</b></td><td><code>fpv-drone-race.web.app/guide</code></td><td>이 문서</td></tr>
       </table>
+      <p class="muted">주소창에 위 주소만 입력하면 됩니다(<code>https://</code> 생략 가능).</p>
       <h3>수업 코드란?</h3>
-      <p><b>순위표의 이름</b>입니다. 같은 수업 코드를 쓰는 PC끼리 기록이 한 순위표에 모입니다. 주소 끝의 <code>?room=</code> 뒤에 붙입니다.</p>
+      <p><b>순위표의 이름</b>입니다. 같은 수업 코드를 쓰는 PC끼리 기록이 한 순위표에 모입니다. 주소에 붙일 필요 없이 <b>화면에서 입력</b>합니다.</p>
+      <div class="grid2">
+        <div class="card"><b>🎮 시뮬레이터 (학생 PC)</b><br>메인 화면 <b>오른쪽 위 “수업 코드”</b> 칸에 입력 → <b>[적용]</b> (또는 Enter)</div>
+        <div class="card"><b>🏆 순위 화면 (교실 앞)</b><br>화면 <b>오른쪽 위 “수업 코드”</b> 칸에 입력 → <b>[적용]</b> (또는 Enter)</div>
+      </div>
       <div class="card">
-        예) 11월 5일 3반 수업 → 코드를 <code>1105-3반</code>으로 정하면<br>
-        학생: <code>.../fpv-drone-race/?room=1105-3반</code><br>
-        교실 앞: <code>.../fpv-drone-race/board.html?room=1105-3반</code>
+        예) 11월 5일 3반 수업 → 학생 PC와 교실 앞 화면 모두 수업 코드에 <code>1105-3반</code> 입력
       </div>
       <ul>
-        <li><b>두 주소의 코드가 반드시 같아야</b> 기록이 순위 화면에 나옵니다.</li>
-        <li>코드를 바꾸면 빈 순위표가 새로 시작됩니다. 이전 반 기록은 그 코드로 다시 열면 볼 수 있습니다.</li>
-        <li>띄어쓰기와 특수문자(<code>/ . #</code>)는 빼 주세요. <code>?room=</code>을 빼면 기본 코드 <code>class</code>가 됩니다.</li>
-        <li>학생 메뉴 오른쪽 위에 현재 수업 코드가 표시되고, <b>“교실 순위 화면 열기 ↗”</b>를 누르면 같은 코드의 순위 화면이 열립니다.</li>
+        <li><b>학생 PC와 순위 화면의 수업 코드가 반드시 같아야</b> 기록이 순위 화면에 나옵니다.</li>
+        <li>한 번 입력한 코드는 <b>그 PC에 저장</b>돼서 다음에 열어도 그대로입니다. 같은 PC에서 순위 화면을 열면 자동으로 같은 코드가 됩니다.</li>
+        <li>코드를 바꾸면 빈 순위표가 새로 시작됩니다. 이전 반 기록은 그 코드를 다시 입력하면 볼 수 있습니다.</li>
+        <li>띄어쓰기와 특수문자(<code>/ . #</code>)는 자동으로 빠집니다. 아무것도 입력하지 않으면 기본 코드 <code>class</code>입니다.</li>
       </ul>
     </section>
 
@@ -372,7 +376,8 @@
     <section id="board">
       <h2><span class="n">11</span>교실 순위 화면</h2>
       <ol class="steps">
-        <li>교실 앞 PC에서 <code>board.html?room=수업코드</code> 주소를 <b>Chrome</b>으로 엽니다.</li>
+        <li>교실 앞 PC에서 <code>fpv-drone-race.web.app/board</code>를 <b>Chrome</b>으로 엽니다.</li>
+        <li>오른쪽 위 <b>수업 코드</b> 칸에 코드를 입력하고 <b>[적용]</b>을 누릅니다.</li>
         <li><kbd>F11</kbd>로 전체 화면을 켭니다.</li>
         <li>오른쪽 위가 <span class="pill r" style="color:#fff;background:rgba(255,59,85,.2)">● LIVE</span> 인지 확인합니다. (모든 PC 기록이 실시간으로 올라오는 상태)</li>
         <li>필요하면 <b>🔇 소리 꺼짐</b> 버튼을 눌러 <b>🔊 소리 켜짐</b>으로 바꿉니다.</li>
@@ -391,23 +396,24 @@
     <section id="class">
       <h2><span class="n">12</span>수업 진행 순서 (예시)</h2>
       <ol class="steps">
-        <li><b>수업 전</b>: 수업 코드를 정하고(예: <code>1105-3반</code>), 교실 앞 화면에 순위 화면을 띄웁니다. 학생용 링크를 칠판·메신저로 공유합니다.</li>
+        <li><b>수업 전</b>: 수업 코드를 정합니다(예: <code>1105-3반</code>). 교실 앞 PC에서 <code>fpv-drone-race.web.app/board</code>를 열고, 오른쪽 위 <b>수업 코드 칸에 입력 → [적용]</b>. 학생들에게 주소 <code>fpv-drone-race.web.app</code>와 수업 코드를 칠판에 적어 줍니다.</li>
+        <li><b>학생 PC</b>: 주소를 열고 메인 화면 오른쪽 위 <b>수업 코드 칸에 같은 코드 입력 → [적용]</b>.</li>
         <li><b>연결</b>: 실제 드론은 끄고, 조종기를 USB로 연결 → [연결] → COM 포트 선택.</li>
         <li><b>팀 이름</b> 입력 → <b>앵글 · 1단</b>으로 시작 권장.</li>
         <li><b>교육용 맵</b>에서 연습 1~6을 순서대로 (별 3개 목표).</li>
         <li><b>그린 필드</b>에서 첫 완주 → 순위 화면에 이름이 올라가는지 확인.</li>
         <li>익숙해지면 <b>2단</b>, <b>물류 창고</b>, <b>메트로 시티</b>로 도전. 잘하는 학생은 호라이즌·아크로.</li>
-        <li><b>다음 반</b>은 수업 코드만 바꾸면(예: <code>1105-4반</code>) 새 순위표로 시작합니다.</li>
+        <li><b>다음 반</b>은 순위 화면과 학생 PC의 수업 코드 칸만 바꾸면(예: <code>1105-4반</code>) 새 순위표로 시작합니다.</li>
       </ol>
       <div class="warn"><b>팀이 바뀔 때는 팀 이름도 바꿔 주세요.</b> 팀 이름은 PC에 저장돼 있어서, 그대로 두면 이전 팀 이름으로 기록됩니다.</div>
     </section>
 
     <section id="teacher">
       <h2><span class="n">13</span>선생님 설정</h2>
-      <p>GitHub 저장소의 <code>config.js</code> 파일에서 바꿉니다. 고친 뒤 1~2분 지나면 사이트에 반영됩니다.</p>
+      <p><code>config.js</code> 파일에서 바꿉니다. 고친 뒤 사이트(<code>fpv-drone-race.web.app</code>, Firebase Hosting)에 <b>다시 배포</b>해야 반영됩니다. 원본 파일은 GitHub 저장소에 함께 보관됩니다.</p>
       <table>
         <tr><th>항목</th><th>예시</th><th>설명</th></tr>
-        <tr><td><code>room</code></td><td><code>"class"</code></td><td>주소에 <code>?room=</code>이 없을 때 쓰는 기본 수업 코드</td></tr>
+        <tr><td><code>room</code></td><td><code>"class"</code></td><td>화면에서 수업 코드를 입력하지 않았을 때 쓰는 기본 코드</td></tr>
         <tr><td><code>speedLevels</code></td><td><code>[1, 2, 3]</code> → <code>[2]</code></td><td>고를 수 있는 속도 단계. 하나만 남기면 모두 같은 속도로 겨룸</td></tr>
         <tr><td><code>allowedModes</code></td><td><code>["angle"]</code></td><td>고를 수 있는 비행 모드 (angle·horizon·acro)</td></tr>
         <tr><td><code>invert</code></td><td><code>{ throttle: true, ... }</code></td><td>스틱 반전 기본값 (각 PC의 조종 설정에서도 바꿀 수 있음)</td></tr>
@@ -458,6 +464,6 @@
     </section>
   </main>
 </div>
-<footer>FPV 드론 레이스 · CoDrone EDU 조종기 연동 시뮬레이터 · <a href="./">시뮬레이터</a> · <a href="board.html">순위 화면</a></footer>
+<footer>FPV 드론 레이스 · CoDrone EDU 조종기 연동 시뮬레이터 · <a href="./">시뮬레이터</a> · <a href="board">순위 화면</a> · fpv-drone-race.web.app</footer>
 </body>
 </html>
