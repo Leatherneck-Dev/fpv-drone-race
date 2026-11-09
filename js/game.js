@@ -897,6 +897,7 @@ function resize() {
 }
 addEventListener("resize", resize);
 addEventListener("keydown", e => {
+  if (e.target.id === "roomInput") { if (e.code === "Enter") applyRoom(); return; }
   if (e.target.tagName === "INPUT") { if (e.code === "Enter") play(); return; }
   keys[e.code] = true;
   const inMenu = !$("menu").classList.contains("hidden");
@@ -956,8 +957,15 @@ function frame(now) {
 
 // ---------- 시작 ----------
 $("titleKo").textContent = CFG.title && CFG.title !== "FPV 드론 레이스" ? CFG.title : "드론 레이스";
-$("roomTag").textContent = Records.room;
-$("boardLink").href = `board.html?room=${encodeURIComponent(Records.room)}`;
+// 수업 코드: 메뉴에서 입력 → [적용] (이 PC에 저장, 순위 화면도 같은 PC면 자동으로 같은 코드)
+$("roomInput").value = Records.room;
+function applyRoom() {
+  const c = Records.cleanRoom($("roomInput").value);
+  if (!c) { $("roomInput").value = Records.room; return; }
+  if (c === Records.room && !location.search) return banner("수업 코드: " + c, "#34d3ff", 900);
+  saveSettings(); Records.setRoom(c);
+}
+$("roomApply").onclick = applyRoom;
 $("team").value = S.team;
 $("team").addEventListener("input", () => { S.team = $("team").value; $("team").classList.remove("need"); saveSettings(); });
 $("btnPlay").onclick = play;
